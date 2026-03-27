@@ -20,10 +20,143 @@ export default function App() {
     category: 'equity',
     last_price: 0
   })
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     fetch('/data.json').then(r => r.json()).then(setData)
   }, [])
+
+  // 刷新价格
+  const handleRefreshPrices = async () => {
+    if (!data) return
+    setRefreshing(true)
+
+    try {
+      // 1. 获取最新汇率 (USD/CNY)
+      const exchangeRateResponse = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
+      const exchangeRateData = await exchangeRateResponse.json()
+      const newUsdcny = exchangeRateData.rates.CNY.toFixed(2)
+
+      // 2. 分组处理不同市场的股票
+      const aShareSymbols: string[] = []
+      const hkShareSymbols: string[] = []
+      const usShareSymbols: string[] = []
+
+      data.current_positions.forEach(p => {
+        if (p.category !== 'equity') return // 只处理股票
+
+        if (p.symbol.includes('.SZ') || p.symbol.includes('.SH')) {
+          aShareSymbols.push(p.symbol)
+        } else if (p.symbol.includes('.HK')) {
+          hkShareSymbols.push(p.symbol)
+        } else {
+          usShareSymbols.push(p.symbol)
+        }
+      })
+
+      // 3. 获取A股和港股价格 (腾讯财经API)
+      const stockPrices: Record<string, number> = {}
+
+      if (aShareSymbols.length > 0 || hkShareSymbols.length > 0) {
+        const tencentSymbols: string[] = []
+        aShareSymbols.forEach(s => {
+          const [code, market] = s.split('.')
+          tencentSymbols.push(`${market.toLowerCase()}${code}`)
+        })
+        hkShareSymbols.forEach(s => {
+          const [code, market] = s.split('.')
+          tencentSymbols.push(`${market.toLowerCase()}${code}`)
+        })
+
+        const tencentUrl = `https://qt.gtimg.cn/q=${tencentSymbols.join(',')}`
+        const tencentResponse = await fetch(tencentUrl)
+        const tencentData = await tencentResponse.text()
+        const lines = tencentData.split('\n')
+
+        lines.forEach(line => {
+          if (!line) return
+          const match = line.match(/v_(.*?)="(.*?)"/)
+          if (match) {
+            const tencentSymbol = match[1]
+            const fields = match[2].split('~')
+            const price = parseFloat(fields[3])
+
+            // 转换回原格式的代码
+            let originalSymbol = ''
+            if (tencentSymbol.startsWith('sz')) {
+              originalSymbol = `${tencentSymbol.slice(2)}.SZ`
+            } else if (tencentSymbol.startsWith('sh')) {
+              originalSymbol = `${tencentSymbol.slice(2)}.SH`
+            } else if (tencentSymbol.startsWith('hk')) {
+              originalSymbol = `${tencentSymbol.slice(2)}.HK`
+            }
+
+            if (originalSymbol && !isNaN(price)) {
+              stockPrices[originalSymbol] = price
+            }
+          }
+        })
+      }
+
+      // 4. 获取美股价格 (Yahoo Finance API)
+      for (const symbol of usShareSymbols) {
+        try {
+          const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}`
+          const yahooResponse = await fetch(yahooUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+          })
+          const yahooData = await yahooResponse.json()
+          const price = yahooData.chart.result[0].meta.regularMarketPrice
+          if (!isNaN(price)) {
+            stockPrices[symbol] = price
+          }
+        } catch (error) {
+          console.error(`Failed to fetch ${symbol}:`, error)
+        }
+      }
+
+      // 5. 更新持仓价格
+      const updatedPositions = data.current_positions.map(p => {
+        if (stockPrices[p.symbol]) {
+          return {
+            ...p,
+            last_price: stockPrices[p.symbol],
+            last_updated: new Date().toISOString().split('T')[0]
+          }
+        }
+        return p
+      })
+
+      // 6. 更新数据
+      const updatedData = {
+        ...data,
+        current_positions: updatedPositions,
+        config: {
+          ...data.config,
+          usdcny: newUsdcny
+        },
+        nav_history: data.nav_history.map(r => {
+          if (r.is_legacy === 0 && data.nav_history.findIndex(x => x === r) === data.nav_history.filter(x => x.is_legacy === 0).length - 1) {
+            return {
+              ...r,
+              date: new Date().toISOString().split('T')[0]
+            }
+          }
+          return r
+        })
+      }
+
+      setData(updatedData)
+      console.log('Prices refreshed successfully')
+    } catch (error) {
+      console.error('Failed to refresh prices:', error)
+      alert('刷新价格失败，请稍后重试')
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   if (!data) return <div style={{ padding: 40, fontFamily: 'system-ui' }}>加载中...</div>
 
@@ -181,7 +314,30 @@ export default function App() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
         <span style={{ fontSize: 20 }}>📊</span>
         <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>PortfolioLab</h1>
-        <span style={{ fontSize: 12, color: '#888', marginLeft: 'auto' }}>数据截止 {latest.date}</span>
+        <button
+          style={{
+            padding: '6px 12px',
+            fontSize: 12,
+            borderRadius: 6,
+            border: '1px solid #ddd',
+            background: '#fff',
+            cursor: 'pointer',
+            color: '#666',
+            marginLeft: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4
+          }}
+          onClick={handleRefreshPrices}
+          disabled={refreshing}
+        >
+          {refreshing ? (
+            <span>🔄 刷新中...</span>
+          ) : (
+            <span>🔄 刷新价格</span>
+          )}
+        </button>
+        <span style={{ fontSize: 12, color: '#888' }}>数据截止 {latest.date}</span>
       </div>
 
       {/* NAV Cards */}
