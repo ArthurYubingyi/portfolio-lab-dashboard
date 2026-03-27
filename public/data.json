@@ -1,0 +1,472 @@
+{
+  "nav_history": [
+    {
+      "id": 1,
+      "date": "2026-01-02",
+      "total_value_usd": 14200000,
+      "total_value_cny": 100820000,
+      "units": 10000,
+      "nav_per_share": 1420,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 2,
+      "date": "2026-01-09",
+      "total_value_usd": 14185000,
+      "total_value_cny": 100713500,
+      "units": 10000,
+      "nav_per_share": 1418.5,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 3,
+      "date": "2026-01-16",
+      "total_value_usd": 14230000,
+      "total_value_cny": 101033000,
+      "units": 10000,
+      "nav_per_share": 1423,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 4,
+      "date": "2026-01-23",
+      "total_value_usd": 14310000,
+      "total_value_cny": 101601000,
+      "units": 10000,
+      "nav_per_share": 1431,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 5,
+      "date": "2026-01-30",
+      "total_value_usd": 14280000,
+      "total_value_cny": 101388000,
+      "units": 10000,
+      "nav_per_share": 1428,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 6,
+      "date": "2026-02-06",
+      "total_value_usd": 14350000,
+      "total_value_cny": 101885000,
+      "units": 10000,
+      "nav_per_share": 1435,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 7,
+      "date": "2026-02-13",
+      "total_value_usd": 14420000,
+      "total_value_cny": 102382000,
+      "units": 10000,
+      "nav_per_share": 1442,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 8,
+      "date": "2026-02-20",
+      "total_value_usd": 14390000,
+      "total_value_cny": 102169000,
+      "units": 10000,
+      "nav_per_share": 1439,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 9,
+      "date": "2026-02-27",
+      "total_value_usd": 14480000,
+      "total_value_cny": 102808000,
+      "units": 10000,
+      "nav_per_share": 1448,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 10,
+      "date": "2026-03-03",
+      "total_value_usd": 14520000,
+      "total_value_cny": 103092000,
+      "units": 10000,
+      "nav_per_share": 1452,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 11,
+      "date": "2026-03-04",
+      "total_value_usd": 14555000,
+      "total_value_cny": 103340500,
+      "units": 10000,
+      "nav_per_share": 1455.5,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 12,
+      "date": "2026-03-05",
+      "total_value_usd": 14570000,
+      "total_value_cny": 103447000,
+      "units": 10000,
+      "nav_per_share": 1457,
+      "cashflow_amount": 0,
+      "is_legacy": 1
+    },
+    {
+      "id": 13,
+      "date": "2026-03-06",
+      "total_value_usd": 14573613.49,
+      "total_value_cny": 103472655.779,
+      "units": 10000,
+      "nav_per_share": 1,
+      "cashflow_amount": 0,
+      "is_legacy": 0
+    },
+    {
+      "id": 14,
+      "date": "2026-03-10",
+      "total_value_usd": 14789249.65,
+      "total_value_cny": 105003672.515,
+      "units": 10000,
+      "nav_per_share": 1.014796,
+      "cashflow_amount": 0,
+      "is_legacy": 0
+    },
+    {
+      "id": 15,
+      "date": "2026-03-26",
+      "total_value_usd": 14750585.48,
+      "total_value_cny": 101857217.94,
+      "units": 10000,
+      "nav_per_share": 1.012143,
+      "cashflow_amount": 0,
+      "is_legacy": 0
+    }
+  ],
+  "current_positions": [
+    {
+      "id": 24,
+      "symbol": "CNY_CASH",
+      "name": "人民币现金",
+      "qty": 34830000,
+      "currency": "CNY",
+      "category": "cash",
+      "last_price": 1,
+      "last_updated": "2026-03-26"
+    },
+    {
+      "id": 3,
+      "symbol": "002027.SZ",
+      "name": "分众传媒",
+      "qty": 457100,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 6.45,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 10,
+      "symbol": "00700.HK",
+      "name": "腾讯控股",
+      "qty": 32900,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 493.4,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 13,
+      "symbol": "00939.HK",
+      "name": "建设银行",
+      "qty": 9000,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 8.09,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 11,
+      "symbol": "00981.HK",
+      "name": "中芯国际",
+      "qty": 29000,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 52.5,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 16,
+      "symbol": "01810.HK",
+      "name": "小米集团",
+      "qty": 10000,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 33,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 18,
+      "symbol": "03690.HK",
+      "name": "美团",
+      "qty": 3490,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 85.9,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 12,
+      "symbol": "03968.HK",
+      "name": "招商银行(H)",
+      "qty": 18000,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 48.96,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 15,
+      "symbol": "09660.HK",
+      "name": "地平线机器人",
+      "qty": 9400,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 6.83,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 14,
+      "symbol": "09888.HK",
+      "name": "百度集团",
+      "qty": 9650,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 108.4,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 17,
+      "symbol": "09988.HK",
+      "name": "阿里巴巴",
+      "qty": 15200,
+      "currency": "HKD",
+      "category": "equity",
+      "last_price": 122.6,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 1,
+      "symbol": "159934.SZ",
+      "name": "黄金ETF易方达",
+      "qty": 180421,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 9.922,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 6,
+      "symbol": "159941.SZ",
+      "name": "纳指ETF",
+      "qty": 100000,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 1.276,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 7,
+      "symbol": "300059.SZ",
+      "name": "东方财富",
+      "qty": 10000,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 19.21,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 8,
+      "symbol": "300750.SZ",
+      "name": "宁德时代",
+      "qty": 12900,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 416.18,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 5,
+      "symbol": "510900.SH",
+      "name": "恒生中企ETF",
+      "qty": 300000,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 1.062,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 4,
+      "symbol": "513050.SH",
+      "name": "中概互联网ETF",
+      "qty": 600000,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 1.211,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 2,
+      "symbol": "600036.SH",
+      "name": "招商银行",
+      "qty": 455400,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 39.44,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 9,
+      "symbol": "600519.SH",
+      "name": "贵州茅台",
+      "qty": 3000,
+      "currency": "CNY",
+      "category": "equity",
+      "last_price": 1416.02,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 21,
+      "symbol": "AAPL",
+      "name": "苹果",
+      "qty": 100,
+      "currency": "USD",
+      "category": "equity",
+      "last_price": 250,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 23,
+      "symbol": "GOOG",
+      "name": "谷歌",
+      "qty": 100,
+      "currency": "USD",
+      "category": "equity",
+      "last_price": 150,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 22,
+      "symbol": "LMND",
+      "name": "Lemonade",
+      "qty": 200,
+      "currency": "USD",
+      "category": "equity",
+      "last_price": 80,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 20,
+      "symbol": "NVDA",
+      "name": "英伟达",
+      "qty": 210,
+      "currency": "USD",
+      "category": "equity",
+      "last_price": 800,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 19,
+      "symbol": "TSLA",
+      "name": "特斯拉",
+      "qty": 1815,
+      "currency": "USD",
+      "category": "equity",
+      "last_price": 250,
+      "last_updated": "2026-03-27"
+    },
+    {
+      "id": 28,
+      "symbol": "007339",
+      "name": "沪深300基金",
+      "qty": 410000,
+      "currency": "CNY",
+      "category": "fund",
+      "last_price": 1,
+      "last_updated": "2026-03-26"
+    },
+    {
+      "id": 25,
+      "symbol": "100017",
+      "name": "固收基金",
+      "qty": 3110000,
+      "currency": "CNY",
+      "category": "fund",
+      "last_price": 1,
+      "last_updated": "2026-03-26"
+    },
+    {
+      "id": 26,
+      "symbol": "GOLD_ETF_EXTRA",
+      "name": "黄金ETF追加",
+      "qty": 1080000,
+      "currency": "CNY",
+      "category": "fund",
+      "last_price": 1,
+      "last_updated": "2026-03-26"
+    },
+    {
+      "id": 29,
+      "symbol": "MEDICAL_ETF",
+      "name": "医药ETF",
+      "qty": 240000,
+      "currency": "CNY",
+      "category": "fund",
+      "last_price": 1,
+      "last_updated": "2026-03-26"
+    },
+    {
+      "id": 27,
+      "symbol": "OAKTREE",
+      "name": "橡树资本基金",
+      "qty": 900000,
+      "currency": "CNY",
+      "category": "fund",
+      "last_price": 1,
+      "last_updated": "2026-03-26"
+    },
+    {
+      "id": 30,
+      "symbol": "RUIJUN",
+      "name": "睿郡基金",
+      "qty": 2500000,
+      "currency": "CNY",
+      "category": "fund",
+      "last_price": 1,
+      "last_updated": "2026-03-26"
+    }
+  ],
+  "options_positions": [],
+  "config": {
+    "epochDate": "2026-03-06",
+    "usdcny": "6.92",
+    "initialShares": "10000"
+  },
+  "_meta": {
+    "exported_at": "2026-03-27T08:28:02.776Z",
+    "source": "portfoliolab.db",
+    "tables": {
+      "nav_history": 15,
+      "current_positions": 30,
+      "options_positions": 0,
+      "config": 3
+    }
+  }
+}
