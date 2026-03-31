@@ -1,583 +1,1085 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
+} from 'recharts'
 
-interface NavRecord { date: string; nav_per_share: number; total_value_cny: number; is_legacy: number }
-interface Position { symbol: string; name: string; qty: number; currency: string; category: string; last_price: number; id?: number; last_updated?: string }
-interface Config { epochDate: string; usdcny: string; initialShares: string }
-interface Data { nav_history: NavRecord[]; current_positions: Position[]; config: Config }
+/* ────────── types ────────── */
+interface Position {
+  id: string
+  symbol: string
+  name: string
+  qty: number
+  currency: 'CNY' | 'USD' | 'HKD'
+  market: 'A' | 'HK' | 'US'
+  lastPrice: number
+  lastUpdated: string
+}
 
-const fmt = (n: number, digits = 2) => n.toLocaleString('zh-CN', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+interface OptionPosition {
+  id: string
+  symbol: string       // e.g. "GOOG"
+  optionType: 'Put' | 'Call'
+  strike: number
+  expiry: string       // YYYY-MM-DD
+  direction: 'Buy' | 'Sell'
+  contracts: number    // num contracts (each = 100 shares)
+  markPrice: number    // per-share mark price
+  lastUpdated: string
+}
 
+interface CashFlow {
+  id: string
+  date: string
+  type: 'inflow' | 'outflow'
+  amount: number       // CNY
+  note: string
+  navAtTime: number    // NAV per share at time of flow
+  sharesChanged: number // positive for inflow, negative for outflow
+}
+
+interface NavRecord {
+  date: string
+  nav: number          // per-share NAV
+  totalCny: number
+}
+
+interface AppState {
+  positions: Position[]
+  options: OptionPosition[]
+  cashflows: CashFlow[]
+  navHistory: NavRecord[]
+  totalShares: number
+  epochDate: string
+  lastRefresh: string
+  usdcny: number
+  hkdcny: number
+}
+
+/* ────────── defaults ────────── */
+const EPOCH_DATE = '2026-03-06'
+const INITIAL_SHARES = 10000
+const INITIAL_NAV = 1.0
+
+const defaultPositions: Position[] = [
+  { id: 's1', symbol: 'TSLA', name: '特斯拉', qty: 1815, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
+  { id: 's2', symbol: 'GOOG', name: '谷歌', qty: 1550, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
+  { id: 's3', symbol: '00700.HK', name: '腾讯控股', qty: 4800, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  { id: 's4', symbol: '600519.SH', name: '贵州茅台', qty: 200, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's5', symbol: '300750.SZ', name: '宁德时代', qty: 1500, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's6', symbol: '600036.SH', name: '招商银行', qty: 20000, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's7', symbol: '03968.HK', name: '招商银行H', qty: 10000, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+]
+
+const defaultOptions: OptionPosition[] = [
+  { id: 'o1', symbol: 'GOOG', optionType: 'Put', strike: 285, expiry: '2026-05-15', direction: 'Sell', contracts: 1, markPrice: 14.00, lastUpdated: '' },
+  { id: 'o2', symbol: 'TSLA', optionType: 'Put', strike: 425, expiry: '2026-06-18', direction: 'Sell', contracts: 1, markPrice: 49.38, lastUpdated: '' },
+  { id: 'o3', symbol: 'TSLA', optionType: 'Put', strike: 400, expiry: '2026-08-21', direction: 'Sell', contracts: 1, markPrice: 47.30, lastUpdated: '' },
+]
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
+function today() { return new Date().toISOString().slice(0, 10) }
+function fmtNum(n: number, d = 2) { return n.toLocaleString('zh-CN', { minimumFractionDigits: d, maximumFractionDigits: d }) }
+function fmtInt(n: number) { return n.toLocaleString('zh-CN', { maximumFractionDigits: 0 }) }
+
+/* ────────── localStorage helpers ────────── */
+const LS_KEY = 'portfoliolab_state'
+function loadState(): AppState | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (raw) return JSON.parse(raw) as AppState
+  } catch { /* ignore */ }
+  return null
+}
+function saveState(s: AppState) {
+  localStorage.setItem(LS_KEY, JSON.stringify(s))
+}
+
+function buildInitialState(): AppState {
+  return {
+    positions: defaultPositions,
+    options: defaultOptions,
+    cashflows: [],
+    navHistory: [{ date: EPOCH_DATE, nav: INITIAL_NAV, totalCny: 0 }],
+    totalShares: INITIAL_SHARES,
+    epochDate: EPOCH_DATE,
+    lastRefresh: '',
+    usdcny: 7.25,
+    hkdcny: 0.93,
+  }
+}
+
+/* ────────── CORS proxy helper ────────── */
+/* For browser-side cross-origin requests we need a proxy.
+   We try multiple free CORS proxies and pick whichever responds. */
+const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?',
+]
+let proxyIdx = 0
+
+async function fetchWithProxy(url: string, retries = 2): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    const proxy = CORS_PROXIES[(proxyIdx + i) % CORS_PROXIES.length]
+    try {
+      const r = await fetch(proxy + encodeURIComponent(url), { signal: AbortSignal.timeout(12000) })
+      if (r.ok) {
+        proxyIdx = (proxyIdx + i) % CORS_PROXIES.length
+        return r
+      }
+    } catch { /* next proxy */ }
+  }
+  // last resort: direct (may work for some APIs that have CORS headers)
+  return fetch(url, { signal: AbortSignal.timeout(12000) })
+}
+
+/* ────────── price fetch ────────── */
+async function fetchFxRates(): Promise<{ usdcny: number; hkdcny: number }> {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD', { signal: AbortSignal.timeout(10000) })
+    const d = await r.json()
+    const usdcny = d.rates?.CNY ?? 7.25
+    const usdhkd = d.rates?.HKD ?? 7.8
+    return { usdcny, hkdcny: usdcny / usdhkd }
+  } catch {
+    try {
+      const r = await fetch('https://www.floatrates.com/daily/usd.json', { signal: AbortSignal.timeout(10000) })
+      const d = await r.json()
+      return { usdcny: d.cny?.rate ?? 7.25, hkdcny: (d.cny?.rate ?? 7.25) / (d.hkd?.rate ?? 7.8) }
+    } catch { return { usdcny: 7.25, hkdcny: 0.93 } }
+  }
+}
+
+async function fetchASharePrices(symbols: string[]): Promise<Record<string, number>> {
+  if (!symbols.length) return {}
+  const prices: Record<string, number> = {}
+  // Use Tencent Finance API (works better with CORS)
+  const tencentCodes = symbols.map(s => {
+    const [code, suffix] = s.split('.')
+    return suffix.toLowerCase() + code
+  })
+  try {
+    const r = await fetchWithProxy(`https://qt.gtimg.cn/q=${tencentCodes.join(',')}`)
+    const text = await r.text()
+    text.split('\n').forEach(line => {
+      if (!line.trim()) return
+      const m = line.match(/v_(.*?)="(.*?)"/)
+      if (!m) return
+      const code = m[1]
+      const fields = m[2].split('~')
+      const price = parseFloat(fields[3])
+      if (isNaN(price) || price <= 0) return
+      let sym = ''
+      if (code.startsWith('sz')) sym = code.slice(2) + '.SZ'
+      else if (code.startsWith('sh')) sym = code.slice(2) + '.SH'
+      if (sym) prices[sym] = price
+    })
+  } catch (e) { console.warn('A-share fetch failed', e) }
+  return prices
+}
+
+async function fetchHKPrices(symbols: string[]): Promise<Record<string, number>> {
+  if (!symbols.length) return {}
+  const prices: Record<string, number> = {}
+  const tencentCodes = symbols.map(s => {
+    const code = s.replace('.HK', '')
+    return 'hk' + code
+  })
+  try {
+    const r = await fetchWithProxy(`https://qt.gtimg.cn/q=${tencentCodes.join(',')}`)
+    const text = await r.text()
+    text.split('\n').forEach(line => {
+      if (!line.trim()) return
+      const m = line.match(/v_(.*?)="(.*?)"/)
+      if (!m) return
+      const code = m[1]
+      const fields = m[2].split('~')
+      const price = parseFloat(fields[3])
+      if (isNaN(price) || price <= 0) return
+      if (code.startsWith('hk')) {
+        const sym = code.slice(2) + '.HK'
+        prices[sym] = price
+      }
+    })
+  } catch (e) { console.warn('HK fetch failed', e) }
+  return prices
+}
+
+async function fetchUSPrices(symbols: string[]): Promise<Record<string, number>> {
+  if (!symbols.length) return {}
+  const prices: Record<string, number> = {}
+  for (const sym of symbols) {
+    try {
+      const r = await fetchWithProxy(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`)
+      const d = await r.json()
+      const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice
+      if (price && !isNaN(price)) prices[sym] = price
+    } catch (e) { console.warn(`US fetch failed for ${sym}`, e) }
+  }
+  return prices
+}
+
+/* ────────── NAV calculation ────────── */
+function calcTotalValueCny(
+  positions: Position[],
+  options: OptionPosition[],
+  usdcny: number,
+  hkdcny: number,
+): number {
+  let total = 0
+  for (const p of positions) {
+    let val = p.qty * p.lastPrice
+    if (p.currency === 'USD') val *= usdcny
+    else if (p.currency === 'HKD') val *= hkdcny
+    total += val
+  }
+  // Options: notional = contracts * 100 * markPrice * direction_sign * USD→CNY
+  for (const o of options) {
+    const sign = o.direction === 'Sell' ? -1 : 1
+    // For sold puts: we received premium, so the liability is current mark price
+    // Mark-to-market value of position from holder's perspective
+    const notional = sign * o.contracts * 100 * o.markPrice * usdcny
+    // Selling a put = negative liability (we owe them, so subtract from NAV if mark is high)
+    // If we sold a put and mark goes down → we profit → positive contribution
+    // Simplified: for sold options, the value impact is -(contracts * 100 * markPrice * usdcny)
+    // For bought options, value impact is +(contracts * 100 * markPrice * usdcny)
+    total += notional
+  }
+  return total
+}
+
+function calcNavPerShare(totalCny: number, totalShares: number): number {
+  if (totalShares <= 0) return 1
+  return totalCny / totalShares
+}
+
+/* ────────── pie colors ────────── */
+const PIE_COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#d97706', '#6366f1', '#14b8a6', '#f43f5e']
+
+/* ────────── component ────────── */
 export default function App() {
-  const [data, setData] = useState<Data | null>(null)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editQty, setEditQty] = useState<string>('')
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newPosition, setNewPosition] = useState<Omit<Position, 'id' | 'last_updated'>>({
-    symbol: '',
-    name: '',
-    qty: 0,
-    currency: 'CNY',
-    category: 'equity',
-    last_price: 0
+  const [state, setState] = useState<AppState>(() => loadState() ?? buildInitialState())
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
+    return false
   })
   const [refreshing, setRefreshing] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow'>('overview')
 
+  // Dialogs
+  const [showAddStock, setShowAddStock] = useState(false)
+  const [showAddOption, setShowAddOption] = useState(false)
+  const [showCashFlow, setShowCashFlow] = useState(false)
+  const [editingPosition, setEditingPosition] = useState<Position | null>(null)
+  const [editDeltaQty, setEditDeltaQty] = useState('')
+
+  // Chart range
+  const [chartRange, setChartRange] = useState<'all' | '30d' | '90d'>('all')
+
+  // Persist
+  useEffect(() => { saveState(state) }, [state])
+
+  // Dark mode class
   useEffect(() => {
-    fetch('/data.json').then(r => r.json()).then(setData)
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
+
+  // Toast timer
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(null)
+  const showToast = useCallback((msg: string) => {
+    setToast(msg)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), 3000)
   }, [])
 
-  // 刷新价格
-  const handleRefreshPrices = async () => {
-    if (!data) return
+  /* ────── update helper ────── */
+  const update = useCallback((fn: (s: AppState) => AppState) => {
+    setState(prev => fn(prev))
+  }, [])
+
+  /* ────── refresh prices ────── */
+  const refreshPrices = useCallback(async () => {
     setRefreshing(true)
-
     try {
-      // 1. 获取最新汇率 (USD/CNY)
-      const exchangeRateResponse = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
-      const exchangeRateData = await exchangeRateResponse.json()
-      const newUsdcny = exchangeRateData.rates.CNY.toFixed(2)
+      // FX
+      const fx = await fetchFxRates()
 
-      // 2. 分组处理不同市场的股票
-      const aShareSymbols: string[] = []
-      const hkShareSymbols: string[] = []
-      const usShareSymbols: string[] = []
+      // Group symbols
+      const aSyms = state.positions.filter(p => p.market === 'A').map(p => p.symbol)
+      const hkSyms = state.positions.filter(p => p.market === 'HK').map(p => p.symbol)
+      const usSyms = state.positions.filter(p => p.market === 'US').map(p => p.symbol)
 
-      data.current_positions.forEach(p => {
-        if (p.category !== 'equity') return // 只处理股票
+      const [aPrices, hkPrices, usPrices] = await Promise.all([
+        fetchASharePrices(aSyms),
+        fetchHKPrices(hkSyms),
+        fetchUSPrices(usSyms),
+      ])
 
-        if (p.symbol.includes('.SZ') || p.symbol.includes('.SH')) {
-          aShareSymbols.push(p.symbol)
-        } else if (p.symbol.includes('.HK')) {
-          hkShareSymbols.push(p.symbol)
+      const allPrices = { ...aPrices, ...hkPrices, ...usPrices }
+      const now = today()
+
+      update(s => {
+        const newPositions = s.positions.map(p => {
+          const price = allPrices[p.symbol]
+          if (price !== undefined) return { ...p, lastPrice: price, lastUpdated: now }
+          return p
+        })
+
+        // Update option marks using underlying prices
+        const newOptions = s.options.map(o => {
+          // We could estimate option price from underlying but let's keep mark static
+          // unless we have actual option quotes. Just update timestamp.
+          return { ...o, lastUpdated: now }
+        })
+
+        const totalCny = calcTotalValueCny(newPositions, newOptions, fx.usdcny, fx.hkdcny)
+        const nav = calcNavPerShare(totalCny, s.totalShares)
+
+        // Append or update today's NAV
+        let newHistory = [...s.navHistory]
+        const lastIdx = newHistory.findIndex(r => r.date === now)
+        if (lastIdx >= 0) {
+          newHistory[lastIdx] = { date: now, nav, totalCny }
         } else {
-          usShareSymbols.push(p.symbol)
+          newHistory.push({ date: now, nav, totalCny })
+        }
+
+        return {
+          ...s,
+          positions: newPositions,
+          options: newOptions,
+          usdcny: fx.usdcny,
+          hkdcny: fx.hkdcny,
+          lastRefresh: new Date().toLocaleString('zh-CN'),
+          navHistory: newHistory,
         }
       })
 
-      // 3. 获取A股和港股价格 (腾讯财经API)
-      const stockPrices: Record<string, number> = {}
-
-      if (aShareSymbols.length > 0 || hkShareSymbols.length > 0) {
-        const tencentSymbols: string[] = []
-        aShareSymbols.forEach(s => {
-          const [code, market] = s.split('.')
-          tencentSymbols.push(`${market.toLowerCase()}${code}`)
-        })
-        hkShareSymbols.forEach(s => {
-          const [code, market] = s.split('.')
-          tencentSymbols.push(`${market.toLowerCase()}${code}`)
-        })
-
-        const tencentUrl = `https://qt.gtimg.cn/q=${tencentSymbols.join(',')}`
-        const tencentResponse = await fetch(tencentUrl)
-        const tencentData = await tencentResponse.text()
-        const lines = tencentData.split('\n')
-
-        lines.forEach(line => {
-          if (!line) return
-          const match = line.match(/v_(.*?)="(.*?)"/)
-          if (match) {
-            const tencentSymbol = match[1]
-            const fields = match[2].split('~')
-            const price = parseFloat(fields[3])
-
-            // 转换回原格式的代码
-            let originalSymbol = ''
-            if (tencentSymbol.startsWith('sz')) {
-              originalSymbol = `${tencentSymbol.slice(2)}.SZ`
-            } else if (tencentSymbol.startsWith('sh')) {
-              originalSymbol = `${tencentSymbol.slice(2)}.SH`
-            } else if (tencentSymbol.startsWith('hk')) {
-              originalSymbol = `${tencentSymbol.slice(2)}.HK`
-            }
-
-            if (originalSymbol && !isNaN(price)) {
-              stockPrices[originalSymbol] = price
-            }
-          }
-        })
-      }
-
-      // 4. 获取美股价格 (Yahoo Finance API)
-      for (const symbol of usShareSymbols) {
-        try {
-          const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}`
-          const yahooResponse = await fetch(yahooUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-          })
-          const yahooData = await yahooResponse.json()
-          const price = yahooData.chart.result[0].meta.regularMarketPrice
-          if (!isNaN(price)) {
-            stockPrices[symbol] = price
-          }
-        } catch (error) {
-          console.error(`Failed to fetch ${symbol}:`, error)
-        }
-      }
-
-      // 5. 更新持仓价格
-      const updatedPositions = data.current_positions.map(p => {
-        if (stockPrices[p.symbol]) {
-          return {
-            ...p,
-            last_price: stockPrices[p.symbol],
-            last_updated: new Date().toISOString().split('T')[0]
-          }
-        }
-        return p
-      })
-
-      // 6. 更新数据
-      const updatedData = {
-        ...data,
-        current_positions: updatedPositions,
-        config: {
-          ...data.config,
-          usdcny: newUsdcny
-        },
-        nav_history: data.nav_history.map(r => {
-          if (r.is_legacy === 0 && data.nav_history.findIndex(x => x === r) === data.nav_history.filter(x => x.is_legacy === 0).length - 1) {
-            return {
-              ...r,
-              date: new Date().toISOString().split('T')[0]
-            }
-          }
-          return r
-        })
-      }
-
-      setData(updatedData)
-      console.log('Prices refreshed successfully')
-    } catch (error) {
-      console.error('Failed to refresh prices:', error)
-      alert('刷新价格失败，请稍后重试')
+      showToast('价格和汇率已刷新')
+    } catch (e) {
+      console.error('Refresh failed', e)
+      showToast('刷新失败，请稍后重试')
     } finally {
       setRefreshing(false)
     }
-  }
+  }, [state.positions, state.options, update, showToast])
 
-  if (!data) return <div style={{ padding: 40, fontFamily: 'system-ui' }}>加载中...</div>
+  /* ────── computed values ────── */
+  const totalCny = useMemo(() =>
+    calcTotalValueCny(state.positions, state.options, state.usdcny, state.hkdcny),
+    [state.positions, state.options, state.usdcny, state.hkdcny]
+  )
 
-  const { nav_history, current_positions, config } = data
-  const usdcny = parseFloat(config.usdcny)
+  const navPerShare = useMemo(() =>
+    calcNavPerShare(totalCny, state.totalShares),
+    [totalCny, state.totalShares]
+  )
 
-  // NAV
-  const nonLegacy = nav_history.filter(r => !r.is_legacy)
-  const latest = nonLegacy[nonLegacy.length - 1]
-  const prev = nonLegacy[nonLegacy.length - 2]
-  const nav = latest.nav_per_share
-  const totalCny = latest.total_value_cny
-  const ytd = ((nav - 1) * 100).toFixed(2)
-  const dayChange = prev ? ((nav - prev.nav_per_share) / prev.nav_per_share * 100).toFixed(2) : '0.00'
-  const isUp = parseFloat(dayChange) >= 0
+  const latestNav = state.navHistory.length > 0 ? state.navHistory[state.navHistory.length - 1] : null
+  const prevNav = state.navHistory.length > 1 ? state.navHistory[state.navHistory.length - 2] : null
+  const displayNav = latestNav?.nav ?? navPerShare
+  const dayChange = prevNav ? ((displayNav - prevNav.nav) / prevNav.nav * 100) : 0
+  const sinceInception = ((displayNav / INITIAL_NAV) - 1) * 100
 
   // Positions with CNY value
-  const equities = current_positions.filter(p => p.category === 'equity').map(p => {
-    let valueCny = p.qty * p.last_price
-    if (p.currency === 'USD') valueCny *= usdcny
-    if (p.currency === 'HKD') valueCny *= usdcny * 0.9
-    return { ...p, valueCny }
-  }).sort((a, b) => b.valueCny - a.valueCny)
+  const positionsEnriched = useMemo(() =>
+    state.positions.map(p => {
+      let valueCny = p.qty * p.lastPrice
+      if (p.currency === 'USD') valueCny *= state.usdcny
+      else if (p.currency === 'HKD') valueCny *= state.hkdcny
+      const weight = totalCny > 0 ? (valueCny / totalCny * 100) : 0
+      return { ...p, valueCny, weight }
+    }).sort((a, b) => b.valueCny - a.valueCny),
+    [state.positions, state.usdcny, state.hkdcny, totalCny]
+  )
 
-  const funds = current_positions.filter(p => p.category === 'fund' || p.category === 'cash')
+  // Options with CNY notional
+  const optionsEnriched = useMemo(() =>
+    state.options.map(o => {
+      const notionalUsd = o.contracts * 100 * o.markPrice
+      const notionalCny = notionalUsd * state.usdcny
+      const sign = o.direction === 'Sell' ? -1 : 1
+      return { ...o, notionalUsd, notionalCny, signedCny: sign * notionalCny }
+    }),
+    [state.options, state.usdcny]
+  )
 
-  // 编辑数量
-  const handleEdit = (position: Position) => {
-    setEditingId(position.id || null)
-    setEditQty(position.qty.toString())
+  // Pie data
+  const pieData = useMemo(() => {
+    const items: { name: string; value: number }[] = []
+    for (const p of positionsEnriched) {
+      if (p.valueCny > 0) items.push({ name: p.name, value: p.valueCny })
+    }
+    // group options
+    const optTotal = optionsEnriched.reduce((s, o) => s + Math.abs(o.signedCny), 0)
+    if (optTotal > 0) items.push({ name: '期权', value: optTotal })
+    return items
+  }, [positionsEnriched, optionsEnriched])
+
+  // Chart data
+  const chartData = useMemo(() => {
+    let data = state.navHistory
+    if (chartRange === '30d') data = data.slice(-30)
+    else if (chartRange === '90d') data = data.slice(-90)
+    return data.map(r => ({ date: r.date.slice(5), nav: parseFloat(r.nav.toFixed(6)), total: r.totalCny }))
+  }, [state.navHistory, chartRange])
+
+  /* ────── add stock ────── */
+  const [newStock, setNewStock] = useState({ symbol: '', name: '', qty: '', currency: 'CNY' as 'CNY' | 'USD' | 'HKD', market: 'A' as 'A' | 'HK' | 'US', lastPrice: '' })
+  const handleAddStock = () => {
+    const qty = parseFloat(newStock.qty)
+    const price = parseFloat(newStock.lastPrice)
+    if (!newStock.symbol || !newStock.name || isNaN(qty) || qty <= 0) { showToast('请填写完整信息'); return }
+    update(s => ({
+      ...s,
+      positions: [...s.positions, {
+        id: genId(), symbol: newStock.symbol.toUpperCase(), name: newStock.name,
+        qty, currency: newStock.currency, market: newStock.market,
+        lastPrice: isNaN(price) ? 0 : price, lastUpdated: today(),
+      }]
+    }))
+    setNewStock({ symbol: '', name: '', qty: '', currency: 'CNY', market: 'A', lastPrice: '' })
+    setShowAddStock(false)
+    showToast('已添加持仓')
   }
 
-  // 保存编辑
-  const handleSaveEdit = async () => {
-    if (editingId === null) return
+  /* ────── delta qty (adjust shares) ────── */
+  const handleDeltaQty = () => {
+    if (!editingPosition) return
+    const delta = parseFloat(editDeltaQty)
+    if (isNaN(delta)) { showToast('请输入有效数字'); return }
+    update(s => ({
+      ...s,
+      positions: s.positions.map(p =>
+        p.id === editingPosition.id
+          ? { ...p, qty: Math.max(0, p.qty + delta), lastUpdated: today() }
+          : p
+      )
+    }))
+    setEditingPosition(null)
+    setEditDeltaQty('')
+    showToast(delta >= 0 ? `已增持 ${delta} 股` : `已减持 ${Math.abs(delta)} 股`)
+  }
 
-    const updatedPositions = data.current_positions.map(p => {
-      if (p.id === editingId) {
-        return { ...p, qty: parseFloat(editQty) }
+  /* ────── delete position ────── */
+  const handleDeletePosition = (id: string) => {
+    if (!confirm('确定删除此持仓？')) return
+    update(s => ({ ...s, positions: s.positions.filter(p => p.id !== id) }))
+    showToast('已删除')
+  }
+
+  /* ────── add option ────── */
+  const [newOpt, setNewOpt] = useState({ symbol: '', optionType: 'Put' as 'Put' | 'Call', strike: '', expiry: '', direction: 'Sell' as 'Buy' | 'Sell', contracts: '1', markPrice: '' })
+  const handleAddOption = () => {
+    const strike = parseFloat(newOpt.strike)
+    const mark = parseFloat(newOpt.markPrice)
+    const contracts = parseInt(newOpt.contracts)
+    if (!newOpt.symbol || isNaN(strike) || isNaN(contracts) || !newOpt.expiry) { showToast('请填写完整信息'); return }
+    update(s => ({
+      ...s,
+      options: [...s.options, {
+        id: genId(), symbol: newOpt.symbol.toUpperCase(), optionType: newOpt.optionType,
+        strike, expiry: newOpt.expiry, direction: newOpt.direction,
+        contracts, markPrice: isNaN(mark) ? 0 : mark, lastUpdated: today(),
+      }]
+    }))
+    setNewOpt({ symbol: '', optionType: 'Put', strike: '', expiry: '', direction: 'Sell', contracts: '1', markPrice: '' })
+    setShowAddOption(false)
+    showToast('已添加期权')
+  }
+
+  /* ────── delete option ────── */
+  const handleDeleteOption = (id: string) => {
+    if (!confirm('确定删除此期权？')) return
+    update(s => ({ ...s, options: s.options.filter(o => o.id !== id) }))
+    showToast('已删除')
+  }
+
+  /* ────── cashflow (unitization) ────── */
+  const [newCF, setNewCF] = useState({ type: 'inflow' as 'inflow' | 'outflow', amount: '', note: '' })
+  const handleCashFlow = () => {
+    const amount = parseFloat(newCF.amount)
+    if (isNaN(amount) || amount <= 0) { showToast('请输入有效金额'); return }
+    const currentNav = navPerShare > 0 ? navPerShare : INITIAL_NAV
+    const sharesChanged = newCF.type === 'inflow'
+      ? amount / currentNav
+      : -(amount / currentNav)
+
+    update(s => {
+      const newShares = Math.max(0, s.totalShares + sharesChanged)
+      return {
+        ...s,
+        totalShares: newShares,
+        cashflows: [...s.cashflows, {
+          id: genId(), date: today(), type: newCF.type,
+          amount, note: newCF.note || (newCF.type === 'inflow' ? '资金流入' : '资金流出'),
+          navAtTime: currentNav, sharesChanged,
+        }]
       }
-      return p
     })
-
-    const updatedData = { ...data, current_positions: updatedPositions }
-    setData(updatedData)
-    setEditingId(null)
-    setEditQty('')
-
-    // 保存到 data.json
-    try {
-      const response = await fetch('/data.json', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatedData, null, 2)
-      })
-
-      if (response.ok) {
-        console.log('数据已保存')
-        // 提交到 git
-        const commitResponse = await fetch('/api/commit', { method: 'POST' })
-        if (commitResponse.ok) {
-          console.log('已提交到 git')
-        }
-      }
-    } catch (error) {
-      console.error('保存失败:', error)
-    }
+    setNewCF({ type: 'inflow', amount: '', note: '' })
+    setShowCashFlow(false)
+    showToast(newCF.type === 'inflow' ? '资金已流入，份额已增加' : '资金已流出，份额已减少')
   }
 
-  // 删除持仓
-  const handleDelete = async (id: number) => {
-    if (!confirm('确定要删除这个持仓吗？')) return
-
-    const updatedPositions = data.current_positions.filter(p => p.id !== id)
-    const updatedData = { ...data, current_positions: updatedPositions }
-    setData(updatedData)
-
-    // 保存到 data.json
-    try {
-      const response = await fetch('/data.json', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatedData, null, 2)
-      })
-
-      if (response.ok) {
-        console.log('数据已保存')
-        // 提交到 git
-        const commitResponse = await fetch('/api/commit', { method: 'POST' })
-        if (commitResponse.ok) {
-          console.log('已提交到 git')
-        }
-      }
-    } catch (error) {
-      console.error('保存失败:', error)
-    }
+  /* ────── export / import ────── */
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `portfoliolab-${today()}.json`; a.click()
+    URL.revokeObjectURL(url)
+    showToast('数据已导出')
   }
 
-  // 添加新持仓
-  const handleAddPosition = async () => {
-    if (!newPosition.symbol || !newPosition.name || newPosition.qty <= 0) {
-      alert('请填写完整信息')
-      return
-    }
-
-    const newId = Math.max(...data.current_positions.map(p => p.id || 0), 0) + 1
-    const position: Position = {
-      ...newPosition,
-      id: newId,
-      last_updated: new Date().toISOString().split('T')[0]
-    }
-
-    const updatedPositions = [...data.current_positions, position]
-    const updatedData = { ...data, current_positions: updatedPositions }
-    setData(updatedData)
-    setShowAddForm(false)
-    setNewPosition({
-      symbol: '',
-      name: '',
-      qty: 0,
-      currency: 'CNY',
-      category: 'equity',
-      last_price: 0
-    })
-
-    // 保存到 data.json
-    try {
-      const response = await fetch('/data.json', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatedData, null, 2)
-      })
-
-      if (response.ok) {
-        console.log('数据已保存')
-        // 提交到 git
-        const commitResponse = await fetch('/api/commit', { method: 'POST' })
-        if (commitResponse.ok) {
-          console.log('已提交到 git')
+  const handleImport = () => {
+    const input = document.createElement('input')
+    input.type = 'file'; input.accept = '.json'
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      try {
+        const text = await file.text()
+        const imported = JSON.parse(text) as AppState
+        if (imported.positions && imported.navHistory) {
+          setState(imported)
+          showToast('数据已导入')
+        } else {
+          showToast('无效的数据格式')
         }
-      }
-    } catch (error) {
-      console.error('保存失败:', error)
+      } catch { showToast('导入失败') }
     }
+    input.click()
   }
 
+  const handleReset = () => {
+    if (!confirm('确定要重置所有数据吗？这将恢复为默认持仓。')) return
+    const fresh = buildInitialState()
+    setState(fresh)
+    showToast('已重置为默认数据')
+  }
+
+  /* ────── render ────── */
   return (
-    <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', maxWidth: 1000, margin: '0 auto', padding: '24px 16px', background: '#f8f9fa', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <span style={{ fontSize: 20 }}>📊</span>
-        <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>PortfolioLab</h1>
-        <button
-          style={{
-            padding: '6px 12px',
-            fontSize: 12,
-            borderRadius: 6,
-            border: '1px solid #ddd',
-            background: '#fff',
-            cursor: 'pointer',
-            color: '#666',
-            marginLeft: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4
-          }}
-          onClick={handleRefreshPrices}
-          disabled={refreshing}
-        >
-          {refreshing ? (
-            <span>🔄 刷新中...</span>
-          ) : (
-            <span>🔄 刷新价格</span>
-          )}
-        </button>
-        <span style={{ fontSize: 12, color: '#888' }}>数据截止 {latest.date}</span>
+    <div className="container" style={{ paddingBottom: 40 }}>
+      {/* Header */}
+      <header>
+        <div className="inner">
+          <h1>
+            <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-label="PortfolioLab">
+              <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" strokeWidth="2"/>
+              <path d="M8 22 L12 14 L17 18 L22 8 L26 12" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <circle cx="12" cy="14" r="2" fill="var(--accent)"/>
+              <circle cx="22" cy="8" r="2" fill="var(--accent)"/>
+            </svg>
+            PortfolioLab
+          </h1>
+          <div className="actions">
+            <span style={{ fontSize: '.75rem', color: 'var(--fg2)' }}>
+              {state.lastRefresh ? `更新: ${state.lastRefresh}` : '尚未刷新'}
+            </span>
+            <button onClick={refreshPrices} disabled={refreshing} className="primary">
+              {refreshing ? <><span className="spinner" style={{ marginRight: 4 }}></span>刷新中...</> : '刷新行情'}
+            </button>
+            <button onClick={() => setDarkMode(!darkMode)} title="切换主题" style={{ fontSize: '1rem', padding: '4px 8px' }}>
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* KPI Cards */}
+      <div className="kpi-grid">
+        <div className="card">
+          <div className="label">单位净值</div>
+          <div className="value">{navPerShare > 0 ? navPerShare.toFixed(6) : '--'}</div>
+          <div className={`sub ${sinceInception >= 0 ? 'up' : 'down'}`}>
+            {sinceInception >= 0 ? '+' : ''}{sinceInception.toFixed(2)}% 成立以来
+          </div>
+        </div>
+        <div className="card">
+          <div className="label">总资产 (CNY)</div>
+          <div className="value">¥{fmtInt(totalCny)}</div>
+          <div className="sub">${fmtInt(totalCny / (state.usdcny || 7.25))}</div>
+        </div>
+        <div className="card">
+          <div className="label">当日涨跌</div>
+          <div className={`value ${dayChange >= 0 ? 'up' : 'down'}`}>
+            {dayChange >= 0 ? '+' : ''}{dayChange.toFixed(2)}%
+          </div>
+          <div className="sub">USD/CNY: {state.usdcny.toFixed(4)}</div>
+        </div>
+        <div className="card">
+          <div className="label">总份额</div>
+          <div className="value">{fmtNum(state.totalShares, 2)}</div>
+          <div className="sub">初始 {fmtInt(INITIAL_SHARES)} 份</div>
+        </div>
       </div>
 
-      {/* NAV Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
-        {[
-          { label: '单位净值', value: nav.toFixed(6), sub: `+1.27% 成立以来`, color: '#16a34a' },
-          { label: '总资产 (CNY)', value: `¥${fmt(totalCny, 0)}`, sub: `$${fmt(totalCny / usdcny, 0)}`, color: '#555' },
-          { label: 'YTD 收益', value: `+${ytd}%`, sub: '', color: parseFloat(ytd) >= 0 ? '#16a34a' : '#dc2626' },
-          { label: '当日盈亏', value: `${isUp ? '+' : ''}${dayChange}%`, sub: '', color: isUp ? '#16a34a' : '#dc2626' },
-        ].map(c => (
-          <div key={c.label} style={{ background: '#fff', borderRadius: 12, padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>{c.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: c.color }}>{c.value}</div>
-            {c.sub && <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>{c.sub}</div>}
-          </div>
+      {/* Nav tabs */}
+      <div style={{ display: 'flex', gap: 2, marginTop: 20, borderBottom: '2px solid var(--border)', paddingBottom: 0 }}>
+        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              border: 'none', borderRadius: '6px 6px 0 0',
+              padding: '8px 18px', fontSize: '.85rem', fontWeight: tab === key ? 600 : 400,
+              background: tab === key ? 'var(--accent)' : 'transparent',
+              color: tab === key ? '#fff' : 'var(--fg2)',
+            }}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
-      {/* Equity Positions */}
-      <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600, marginBottom: 14 }}>
-          <span>股票持仓</span>
-          <button
-            style={{
-              padding: '4px 12px',
-              fontSize: 12,
-              borderRadius: 6,
-              border: '1px solid #ddd',
-              background: '#fff',
-              cursor: 'pointer',
-              color: '#666'
-            }}
-            onClick={() => setShowAddForm(!showAddForm)}
-          >
-            + 新增标的
-          </button>
-        </div>
+      {/* ===== OVERVIEW TAB ===== */}
+      {tab === 'overview' && (
+        <>
+          {/* NAV Chart */}
+          {state.navHistory.length > 1 && (
+            <div className="chart-wrap">
+              <div className="section-header">
+                <h2>净值走势</h2>
+                <div className="chart-toggle">
+                  {(['all', '90d', '30d'] as const).map(r => (
+                    <button key={r} onClick={() => setChartRange(r)} className={chartRange === r ? 'active' : ''}>
+                      {r === 'all' ? '全部' : r === '90d' ? '90天' : '30天'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="var(--fg2)" />
+                  <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11 }} stroke="var(--fg2)" />
+                  <Tooltip
+                    contentStyle={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: number) => [v.toFixed(6), '净值']}
+                  />
+                  <Line type="monotone" dataKey="nav" stroke="var(--accent)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
-        {showAddForm && (
-          <div style={{ background: '#f9f9f9', padding: 12, borderRadius: 8, marginBottom: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, fontSize: 12 }}>
-              <input
-                placeholder="代码"
-                value={newPosition.symbol}
-                onChange={(e) => setNewPosition({ ...newPosition, symbol: e.target.value })}
-                style={{ padding: 6, borderRadius: 4, border: '1px solid #ddd' }}
-              />
-              <input
-                placeholder="名称"
-                value={newPosition.name}
-                onChange={(e) => setNewPosition({ ...newPosition, name: e.target.value })}
-                style={{ padding: 6, borderRadius: 4, border: '1px solid #ddd' }}
-              />
-              <input
-                type="number"
-                placeholder="数量"
-                value={newPosition.qty}
-                onChange={(e) => setNewPosition({ ...newPosition, qty: parseFloat(e.target.value) || 0 })}
-                style={{ padding: 6, borderRadius: 4, border: '1px solid #ddd' }}
-              />
-              <select
-                value={newPosition.currency}
-                onChange={(e) => setNewPosition({ ...newPosition, currency: e.target.value })}
-                style={{ padding: 6, borderRadius: 4, border: '1px solid #ddd' }}
-              >
-                <option value="CNY">CNY</option>
-                <option value="USD">USD</option>
-                <option value="HKD">HKD</option>
-              </select>
-              <input
-                type="number"
-                placeholder="价格"
-                value={newPosition.last_price}
-                onChange={(e) => setNewPosition({ ...newPosition, last_price: parseFloat(e.target.value) || 0 })}
-                style={{ padding: 6, borderRadius: 4, border: '1px solid #ddd' }}
-              />
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button
-                  onClick={handleAddPosition}
-                  style={{
-                    padding: '4px 8px',
-                    background: '#16a34a',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    fontSize: 12
-                  }}
-                >
-                  保存
-                </button>
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  style={{
-                    padding: '4px 8px',
-                    background: '#fff',
-                    color: '#666',
-                    border: '1px solid #ddd',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    fontSize: 12
-                  }}
-                >
-                  取消
-                </button>
+          {/* Pie */}
+          {pieData.length > 0 && (
+            <div className="pie-wrap">
+              <div className="card">
+                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>资产配置</h2>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2}>
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => `¥${fmtInt(v)}`} />
+                    <Legend formatter={(v: string) => <span style={{ fontSize: 12 }}>{v}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="card">
+                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>持仓占比</h2>
+                {positionsEnriched.slice(0, 8).map(p => (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', fontSize: '.82rem' }}>
+                    <span>{p.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 80, height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.min(p.weight, 100)}%`, height: '100%', background: 'var(--accent)', borderRadius: 3 }} />
+                      </div>
+                      <span style={{ width: 45, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.weight.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick position table */}
+          <div className="section">
+            <div className="section-header">
+              <h2>股票持仓概览</h2>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>代码</th><th>名称</th><th className="r">数量</th><th className="r">最新价</th>
+                    <th className="r">估值(CNY)</th><th className="r">占比</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {positionsEnriched.map(p => (
+                    <tr key={p.id}>
+                      <td>{p.symbol}</td>
+                      <td>{p.name}</td>
+                      <td className="r">{fmtInt(p.qty)}</td>
+                      <td className="r">{p.lastPrice > 0 ? fmtNum(p.lastPrice) : '--'}</td>
+                      <td className="r">¥{fmtInt(p.valueCny)}</td>
+                      <td className="r">{p.weight.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Quick options table */}
+          {optionsEnriched.length > 0 && (
+            <div className="section">
+              <div className="section-header">
+                <h2>期权持仓概览</h2>
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>标的</th><th>方向</th><th>类型</th><th className="r">行权价</th>
+                      <th>到期日</th><th className="r">合约</th><th className="r">Mark</th><th className="r">名义(CNY)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {optionsEnriched.map(o => (
+                      <tr key={o.id}>
+                        <td>{o.symbol}</td>
+                        <td><span className={`badge badge-${o.direction.toLowerCase()}`}>{o.direction === 'Sell' ? '卖出' : '买入'}</span></td>
+                        <td><span className={`badge badge-${o.optionType.toLowerCase()}`}>{o.optionType}</span></td>
+                        <td className="r">${fmtNum(o.strike)}</td>
+                        <td>{o.expiry}</td>
+                        <td className="r">{o.contracts}</td>
+                        <td className="r">${fmtNum(o.markPrice)}</td>
+                        <td className="r">¥{fmtInt(Math.abs(o.signedCny))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ===== POSITIONS TAB ===== */}
+      {tab === 'positions' && (
+        <div className="section">
+          <div className="section-header">
+            <h2>股票持仓管理</h2>
+            <button className="primary" onClick={() => setShowAddStock(true)}>+ 新增持仓</button>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>代码</th><th>名称</th><th>市场</th><th>币种</th>
+                  <th className="r">数量</th><th className="r">最新价</th><th className="r">估值(CNY)</th>
+                  <th className="r">占比</th><th>更新时间</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {positionsEnriched.map(p => (
+                  <tr key={p.id}>
+                    <td>{p.symbol}</td>
+                    <td>{p.name}</td>
+                    <td>{p.market}</td>
+                    <td>{p.currency}</td>
+                    <td className="r">{fmtInt(p.qty)}</td>
+                    <td className="r">{p.lastPrice > 0 ? fmtNum(p.lastPrice) : '--'}</td>
+                    <td className="r">¥{fmtInt(p.valueCny)}</td>
+                    <td className="r">{p.weight.toFixed(1)}%</td>
+                    <td style={{ fontSize: '.75rem', color: 'var(--fg2)' }}>{p.lastUpdated || '--'}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="sm" onClick={() => { setEditingPosition(p); setEditDeltaQty('') }}>调仓</button>
+                        <button className="sm danger" onClick={() => handleDeletePosition(p.id)}>删除</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ===== OPTIONS TAB ===== */}
+      {tab === 'options' && (
+        <div className="section">
+          <div className="section-header">
+            <h2>期权持仓管理</h2>
+            <button className="primary" onClick={() => setShowAddOption(true)}>+ 新增期权</button>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>标的</th><th>方向</th><th>类型</th><th className="r">行权价</th>
+                  <th>到期日</th><th className="r">合约数</th><th className="r">Mark价格</th>
+                  <th className="r">名义(USD)</th><th className="r">名义(CNY)</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {optionsEnriched.map(o => (
+                  <tr key={o.id}>
+                    <td>{o.symbol}</td>
+                    <td><span className={`badge badge-${o.direction.toLowerCase()}`}>{o.direction === 'Sell' ? '卖出' : '买入'}</span></td>
+                    <td><span className={`badge badge-${o.optionType.toLowerCase()}`}>{o.optionType}</span></td>
+                    <td className="r">${fmtNum(o.strike)}</td>
+                    <td>{o.expiry}</td>
+                    <td className="r">{o.contracts}</td>
+                    <td className="r">${fmtNum(o.markPrice)}</td>
+                    <td className="r">${fmtInt(o.notionalUsd)}</td>
+                    <td className="r">¥{fmtInt(Math.abs(o.signedCny))}</td>
+                    <td>
+                      <button className="sm danger" onClick={() => handleDeleteOption(o.id)}>删除</button>
+                    </td>
+                  </tr>
+                ))}
+                {optionsEnriched.length === 0 && (
+                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: 'var(--fg2)' }}>暂无期权持仓</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ===== CASHFLOW TAB ===== */}
+      {tab === 'cashflow' && (
+        <div className="section">
+          <div className="section-header">
+            <h2>资金流水 (份额法)</h2>
+            <button className="primary" onClick={() => setShowCashFlow(true)}>+ 记录流水</button>
+          </div>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, fontSize: '.85rem' }}>
+              <div>
+                <div className="label">当前总份额</div>
+                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{fmtNum(state.totalShares, 2)}</div>
+              </div>
+              <div>
+                <div className="label">当前净值</div>
+                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{navPerShare.toFixed(6)}</div>
+              </div>
+              <div>
+                <div className="label">累计资金流水</div>
+                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                  {state.cashflows.length} 笔
+                </div>
               </div>
             </div>
           </div>
-        )}
+          <div className="cashflow-log table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>日期</th><th>类型</th><th className="r">金额(CNY)</th><th className="r">当时净值</th>
+                  <th className="r">份额变动</th><th>备注</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...state.cashflows].reverse().map(cf => (
+                  <tr key={cf.id}>
+                    <td>{cf.date}</td>
+                    <td><span className={`badge ${cf.type === 'inflow' ? 'badge-buy' : 'badge-sell'}`}>
+                      {cf.type === 'inflow' ? '流入' : '流出'}
+                    </span></td>
+                    <td className="r">¥{fmtNum(cf.amount, 0)}</td>
+                    <td className="r">{cf.navAtTime.toFixed(6)}</td>
+                    <td className={`r ${cf.sharesChanged >= 0 ? 'up' : 'down'}`}>
+                      {cf.sharesChanged >= 0 ? '+' : ''}{fmtNum(cf.sharesChanged, 2)}
+                    </td>
+                    <td>{cf.note}</td>
+                  </tr>
+                ))}
+                {state.cashflows.length === 0 && (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--fg2)' }}>暂无资金流水记录</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ color: '#aaa', borderBottom: '1px solid #f0f0f0' }}>
-              {['代码', '名称', '数量', '币种', '最新价', '估值(CNY)', '操作'].map(h => (
-                <th key={h} style={{ textAlign: 'left', paddingBottom: 8, fontWeight: 500 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {equities.map(p => (
-              <tr key={p.symbol} style={{ borderBottom: '1px solid #f8f8f8' }}>
-                <td style={td}>{p.symbol}</td>
-                <td style={td}>{p.name}</td>
-                <td style={td}>
-                  {editingId === p.id ? (
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      <input
-                        type="number"
-                        value={editQty}
-                        onChange={(e) => setEditQty(e.target.value)}
-                        style={{ width: 80, padding: 4, borderRadius: 4, border: '1px solid #ddd' }}
-                      />
-                      <div style={{ display: 'flex', gap: 2 }}>
-                        <button
-                          onClick={handleSaveEdit}
-                          style={{
-                            padding: '2px 6px',
-                            background: '#16a34a',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 3,
-                            cursor: 'pointer',
-                            fontSize: 11
-                          }}
-                        >
-                          保存
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingId(null)
-                            setEditQty('')
-                          }}
-                          style={{
-                            padding: '2px 6px',
-                            background: '#fff',
-                            color: '#666',
-                            border: '1px solid #ddd',
-                            borderRadius: 3,
-                            cursor: 'pointer',
-                            fontSize: 11
-                          }}
-                        >
-                          取消
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    fmt(p.qty, 0)
-                  )}
-                </td>
-                <td style={td}>{p.currency}</td>
-                <td style={td}>{p.last_price}</td>
-                <td style={td}>¥{fmt(p.valueCny, 0)}</td>
-                <td style={td}>
-                  {editingId === p.id ? null : (
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button
-                        onClick={() => handleEdit(p)}
-                        style={{
-                          padding: '2px 6px',
-                          fontSize: 11,
-                          borderRadius: 3,
-                          border: '1px solid #ddd',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          color: '#666'
-                        }}
-                      >
-                        编辑
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id!)}
-                        style={{
-                          padding: '2px 6px',
-                          fontSize: 11,
-                          borderRadius: 3,
-                          border: '1px solid #ddd',
-                          background: '#fff',
-                          cursor: 'pointer',
-                          color: '#dc2626'
-                        }}
-                      >
-                        删除
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Footer */}
+      <div className="footer-info">
+        <p>PortfolioLab · 数据存储于浏览器 localStorage · Epoch: {state.epochDate}</p>
+        <p style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+          <button className="sm" onClick={handleExport}>导出数据</button>
+          <button className="sm" onClick={handleImport}>导入数据</button>
+          <button className="sm danger" onClick={handleReset}>重置数据</button>
+        </p>
       </div>
 
-      {/* Funds & Cash */}
-      <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-        <div style={{ fontWeight: 600, marginBottom: 14 }}>现金 & 基金</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ color: '#aaa', borderBottom: '1px solid #f0f0f0' }}>
-              {['名称', '金额(CNY)'].map(h => (
-                <th key={h} style={{ textAlign: 'left', paddingBottom: 8, fontWeight: 500 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {funds.map(p => (
-              <tr key={p.symbol} style={{ borderBottom: '1px solid #f8f8f8' }}>
-                <td style={td}>{p.name}</td>
-                <td style={td}>¥{fmt(p.qty * p.last_price, 0)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* ===== DIALOGS ===== */}
 
-      <div style={{ fontSize: 11, color: '#ccc', marginTop: 12, textAlign: 'right' }}>
-        PortfolioLab · 静态快照 · {latest.date}
-      </div>
+      {/* Add Stock Dialog */}
+      {showAddStock && (
+        <div className="dialog-overlay" onClick={() => setShowAddStock(false)}>
+          <div className="dialog" onClick={e => e.stopPropagation()}>
+            <h3>新增股票持仓</h3>
+            <div className="row">
+              <div className="field">
+                <label>代码</label>
+                <input placeholder="如 600519.SH" value={newStock.symbol} onChange={e => setNewStock({ ...newStock, symbol: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>名称</label>
+                <input placeholder="如 贵州茅台" value={newStock.name} onChange={e => setNewStock({ ...newStock, name: e.target.value })} />
+              </div>
+            </div>
+            <div className="row3">
+              <div className="field">
+                <label>市场</label>
+                <select value={newStock.market} onChange={e => {
+                  const m = e.target.value as 'A' | 'HK' | 'US'
+                  const cur = m === 'A' ? 'CNY' : m === 'HK' ? 'HKD' : 'USD'
+                  setNewStock({ ...newStock, market: m, currency: cur as 'CNY' | 'USD' | 'HKD' })
+                }}>
+                  <option value="A">A股</option>
+                  <option value="HK">港股</option>
+                  <option value="US">美股</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>数量</label>
+                <input type="number" placeholder="0" value={newStock.qty} onChange={e => setNewStock({ ...newStock, qty: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>当前价格</label>
+                <input type="number" placeholder="可选，刷新时自动获取" value={newStock.lastPrice} onChange={e => setNewStock({ ...newStock, lastPrice: e.target.value })} />
+              </div>
+            </div>
+            <div className="actions">
+              <button onClick={() => setShowAddStock(false)}>取消</button>
+              <button className="primary" onClick={handleAddStock}>确认添加</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delta Qty Dialog */}
+      {editingPosition && (
+        <div className="dialog-overlay" onClick={() => setEditingPosition(null)}>
+          <div className="dialog" onClick={e => e.stopPropagation()}>
+            <h3>调仓 - {editingPosition.name} ({editingPosition.symbol})</h3>
+            <p style={{ fontSize: '.85rem', color: 'var(--fg2)', marginBottom: 12 }}>
+              当前持仓: {fmtInt(editingPosition.qty)} 股
+            </p>
+            <div className="field">
+              <label>调整数量（正数增持，负数减持）</label>
+              <input type="number" value={editDeltaQty} onChange={e => setEditDeltaQty(e.target.value)} placeholder="如 +500 或 -200" />
+            </div>
+            {editDeltaQty && !isNaN(parseFloat(editDeltaQty)) && (
+              <p style={{ fontSize: '.82rem', color: 'var(--fg2)' }}>
+                调整后: {fmtInt(Math.max(0, editingPosition.qty + parseFloat(editDeltaQty)))} 股
+              </p>
+            )}
+            <div className="actions">
+              <button onClick={() => setEditingPosition(null)}>取消</button>
+              <button className="primary" onClick={handleDeltaQty}>确认调仓</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Option Dialog */}
+      {showAddOption && (
+        <div className="dialog-overlay" onClick={() => setShowAddOption(false)}>
+          <div className="dialog" onClick={e => e.stopPropagation()}>
+            <h3>新增期权持仓</h3>
+            <div className="row">
+              <div className="field">
+                <label>标的代码</label>
+                <input placeholder="如 TSLA" value={newOpt.symbol} onChange={e => setNewOpt({ ...newOpt, symbol: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>方向</label>
+                <select value={newOpt.direction} onChange={e => setNewOpt({ ...newOpt, direction: e.target.value as 'Buy' | 'Sell' })}>
+                  <option value="Sell">Sell (卖出)</option>
+                  <option value="Buy">Buy (买入)</option>
+                </select>
+              </div>
+            </div>
+            <div className="row3">
+              <div className="field">
+                <label>类型</label>
+                <select value={newOpt.optionType} onChange={e => setNewOpt({ ...newOpt, optionType: e.target.value as 'Put' | 'Call' })}>
+                  <option value="Put">Put</option>
+                  <option value="Call">Call</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>行权价</label>
+                <input type="number" placeholder="0" value={newOpt.strike} onChange={e => setNewOpt({ ...newOpt, strike: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>到期日</label>
+                <input type="date" value={newOpt.expiry} onChange={e => setNewOpt({ ...newOpt, expiry: e.target.value })} />
+              </div>
+            </div>
+            <div className="row">
+              <div className="field">
+                <label>合约数</label>
+                <input type="number" placeholder="1" value={newOpt.contracts} onChange={e => setNewOpt({ ...newOpt, contracts: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Mark价格 (每股)</label>
+                <input type="number" placeholder="0" value={newOpt.markPrice} onChange={e => setNewOpt({ ...newOpt, markPrice: e.target.value })} />
+              </div>
+            </div>
+            <div className="actions">
+              <button onClick={() => setShowAddOption(false)}>取消</button>
+              <button className="primary" onClick={handleAddOption}>确认添加</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CashFlow Dialog */}
+      {showCashFlow && (
+        <div className="dialog-overlay" onClick={() => setShowCashFlow(false)}>
+          <div className="dialog" onClick={e => e.stopPropagation()}>
+            <h3>记录资金流水</h3>
+            <p style={{ fontSize: '.82rem', color: 'var(--fg2)', marginBottom: 12 }}>
+              当前净值: {navPerShare.toFixed(6)} | 当前份额: {fmtNum(state.totalShares, 2)}
+            </p>
+            <div className="row">
+              <div className="field">
+                <label>类型</label>
+                <select value={newCF.type} onChange={e => setNewCF({ ...newCF, type: e.target.value as 'inflow' | 'outflow' })}>
+                  <option value="inflow">资金流入 (申购)</option>
+                  <option value="outflow">资金流出 (赎回)</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>金额 (CNY)</label>
+                <input type="number" placeholder="0" value={newCF.amount} onChange={e => setNewCF({ ...newCF, amount: e.target.value })} />
+              </div>
+            </div>
+            <div className="field">
+              <label>备注</label>
+              <input placeholder="可选" value={newCF.note} onChange={e => setNewCF({ ...newCF, note: e.target.value })} />
+            </div>
+            {newCF.amount && !isNaN(parseFloat(newCF.amount)) && parseFloat(newCF.amount) > 0 && (
+              <div className="card" style={{ marginTop: 8, fontSize: '.82rem' }}>
+                <div>份额变动: {newCF.type === 'inflow' ? '+' : '-'}{fmtNum(parseFloat(newCF.amount) / (navPerShare > 0 ? navPerShare : 1), 2)} 份</div>
+                <div>变动后总份额: {fmtNum(state.totalShares + (newCF.type === 'inflow' ? 1 : -1) * parseFloat(newCF.amount) / (navPerShare > 0 ? navPerShare : 1), 2)}</div>
+              </div>
+            )}
+            <div className="actions">
+              <button onClick={() => setShowCashFlow(false)}>取消</button>
+              <button className="primary" onClick={handleCashFlow}>确认</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }
-
-const td: React.CSSProperties = { padding: '9px 0', color: '#333' }
