@@ -57,6 +57,11 @@ interface AppState {
   hkdcny: number
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 /* ────────── defaults ────────── */
 const EPOCH_DATE = '2026-03-06'
 const INITIAL_SHARES = 10000
@@ -104,8 +109,25 @@ const defaultOptions: OptionPosition[] = [
   { id: 'o1', symbol: 'GOOG', optionType: 'Put', strike: 285, expiry: '2026-05-15', direction: 'Sell', contracts: 1, markPrice: 0, currency: 'USD', lastUpdated: '' },
   { id: 'o2', symbol: 'TSLA', optionType: 'Put', strike: 425, expiry: '2026-06-18', direction: 'Sell', contracts: 1, markPrice: 0, currency: 'USD', lastUpdated: '' },
   { id: 'o3', symbol: 'TSLA', optionType: 'Put', strike: 400, expiry: '2026-08-21', direction: 'Sell', contracts: 1, markPrice: 0, currency: 'USD', lastUpdated: '' },
-  { id: 'o4', symbol: '00700.HK', optionType: 'Put', strike: 450, expiry: '2026-09-29', direction: 'Sell', contracts: 1, markPrice: 0, currency: 'HKD', lastUpdated: '' },
+  { id: 'o4', symbol: '00700.HK', optionType: 'Put', strike: 450, expiry: '2026-09-29', direction: 'Sell', contracts: 11, markPrice: 0, currency: 'HKD', lastUpdated: '' },
 ]
+
+/* ────────── 投资哲学 System Prompt ────────── */
+const INVESTMENT_SYSTEM_PROMPT = `你是Arthur的私人投资顾问AI。你必须严格基于以下投资原则来分析、讨论、提醒和建议。当Arthur提出投资想法时，你要：
+1. 判断是否符合他的投资原则
+2. 如果违背原则，明确指出违背了哪条
+3. 用他自己的话提醒他（引用原则原文）
+4. 给出建议时要考虑当前仓位数据
+
+投资原则全文：
+目标: 花合适的时间，追求复合增长。市场给多少都行，心中有市场就很难战胜市场。腾出时间，回归生活，才是真自由。健康长寿是成功投资者的必要条件。追求安全稳定持续的现金流。
+原则：要么被动投资，动态平衡，避免人性的贪婪和恐惧。要么减少决策频率，等待低估买，等待高估卖。寻找少数赢家，承担有价值风险。不依牛熊，依竞争力保守估值。横盘筑底买入。
+策略：高筑墙（大核安全，人生只要富一次，不下牌桌），广积粮（现金），缓称王（耐心，不追平凡机会，投资就是可以重仓，胜率9成才动）。凯利公式指导建仓。
+性格和心理最重要——了解自己，关注过程。不按耐不住或忧心忡忡。最痛时往往最不该放手。买到更低是贪婪，涨一点就抛是恐惧。25-75%仓位比较合适，事先订计划条件达到坚决执行。
+极大耐心——不追逐平庸机会，投资就是可以下重手。一生只要富一次。投资30年最多50标的，一年1-2个。少做决策，频繁操作是复利大敌。血流成河时手上有多少现金最重要。坚持不付过高价格。站在人少的一边。
+选股和能力圈——买股票买的是公司未来净现金流。知道能力圈多大比能力圈多大更重要。不懂不碰。寻找20年仍会在的好公司。好生意好人好价格。世界是幂律法则，少数赢家驱动。投资真正难点是熬过伟大公司必然经历的巨大回撤。
+安全边际——不仅是估值，还是保守仓位、保守组合、逢深度价值逆势买入、简朴知足。投资失败多来于不守安全边际。
+健康长寿是投资成功必要条件。`
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 function today() { return new Date().toISOString().slice(0, 10) }
@@ -140,8 +162,6 @@ function buildInitialState(): AppState {
 }
 
 /* ────────── CORS proxy helper ────────── */
-/* For browser-side cross-origin requests we need a proxy.
-   We try multiple free CORS proxies and pick whichever responds. */
 const CORS_PROXIES = [
   'https://api.allorigins.win/raw?url=',
   'https://corsproxy.io/?',
@@ -159,7 +179,6 @@ async function fetchWithProxy(url: string, retries = 2): Promise<Response> {
       }
     } catch { /* next proxy */ }
   }
-  // last resort: direct (may work for some APIs that have CORS headers)
   return fetch(url, { signal: AbortSignal.timeout(12000) })
 }
 
@@ -183,7 +202,6 @@ async function fetchFxRates(): Promise<{ usdcny: number; hkdcny: number }> {
 async function fetchASharePrices(symbols: string[]): Promise<Record<string, number>> {
   if (!symbols.length) return {}
   const prices: Record<string, number> = {}
-  // Use Tencent Finance API (works better with CORS)
   const tencentCodes = symbols.map(s => {
     const [code, suffix] = s.split('.')
     return suffix.toLowerCase() + code
@@ -263,7 +281,6 @@ function calcTotalValueCny(
     else if (p.currency === 'HKD') val *= hkdcny
     total += val
   }
-  // Options: notional = contracts * 100 * markPrice * direction_sign * FX→CNY
   for (const o of options) {
     const sign = o.direction === 'Sell' ? -1 : 1
     const fxRate = o.currency === 'HKD' ? hkdcny : usdcny
@@ -280,6 +297,7 @@ function calcNavPerShare(totalCny: number, totalShares: number): number {
 
 /* ────────── pie colors ────────── */
 const PIE_COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#d97706', '#6366f1', '#14b8a6', '#f43f5e']
+const ASSET_PIE_COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#d97706', '#16a34a']
 
 /* ────────── component ────────── */
 export default function App() {
@@ -290,7 +308,7 @@ export default function App() {
   })
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow'>('overview')
+  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'advisor'>('overview')
 
   // Dialogs
   const [showAddStock, setShowAddStock] = useState(false)
@@ -302,6 +320,15 @@ export default function App() {
   // Chart range
   const [chartRange, setChartRange] = useState<'all' | '30d' | '90d'>('all')
 
+  // AI Chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // Philosophy section toggle
+  const [showPhilosophy, setShowPhilosophy] = useState(true)
+
   // Persist
   useEffect(() => { saveState(state) }, [state])
 
@@ -309,6 +336,11 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMessages])
 
   // Toast timer
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(null)
@@ -327,10 +359,7 @@ export default function App() {
   const refreshPrices = useCallback(async () => {
     setRefreshing(true)
     try {
-      // FX
       const fx = await fetchFxRates()
-
-      // Group symbols
       const aSyms = state.positions.filter(p => p.market === 'A').map(p => p.symbol)
       const hkSyms = state.positions.filter(p => p.market === 'HK').map(p => p.symbol)
       const usSyms = state.positions.filter(p => p.market === 'US').map(p => p.symbol)
@@ -351,17 +380,13 @@ export default function App() {
           return p
         })
 
-        // Update option marks using underlying prices
         const newOptions = s.options.map(o => {
-          // We could estimate option price from underlying but let's keep mark static
-          // unless we have actual option quotes. Just update timestamp.
           return { ...o, lastUpdated: now }
         })
 
         const totalCny = calcTotalValueCny(newPositions, newOptions, fx.usdcny, fx.hkdcny)
         const nav = calcNavPerShare(totalCny, s.totalShares)
 
-        // Append or update today's NAV
         let newHistory = [...s.navHistory]
         const lastIdx = newHistory.findIndex(r => r.date === now)
         if (lastIdx >= 0) {
@@ -407,17 +432,28 @@ export default function App() {
   const dayChange = prevNav ? ((displayNav - prevNav.nav) / prevNav.nav * 100) : 0
   const sinceInception = ((displayNav / INITIAL_NAV) - 1) * 100
 
-  // Positions with CNY value
+  // 总资产 = 场内所有持仓市值 + 现金固收 + 实物黄金 + 场外股票基金
+  const totalAssets = totalCny + CASH_FIXED_INCOME + PHYSICAL_GOLD + OFFMARKET_STOCK_FUND
+
+  // Positions with CNY value — weight based on totalAssets (#4)
   const positionsEnriched = useMemo(() =>
     state.positions.map(p => {
       let valueCny = p.qty * p.lastPrice
       if (p.currency === 'USD') valueCny *= state.usdcny
       else if (p.currency === 'HKD') valueCny *= state.hkdcny
-      const weight = totalCny > 0 ? (valueCny / totalCny * 100) : 0
+      const weight = totalAssets > 0 ? (valueCny / totalAssets * 100) : 0
       return { ...p, valueCny, weight }
     }).sort((a, b) => b.valueCny - a.valueCny),
-    [state.positions, state.usdcny, state.hkdcny, totalCny]
+    [state.positions, state.usdcny, state.hkdcny, totalAssets]
   )
+
+  // Grouped by market (#5)
+  const positionsGrouped = useMemo(() => {
+    const a = positionsEnriched.filter(p => p.market === 'A').sort((a, b) => b.valueCny - a.valueCny)
+    const hk = positionsEnriched.filter(p => p.market === 'HK').sort((a, b) => b.valueCny - a.valueCny)
+    const us = positionsEnriched.filter(p => p.market === 'US').sort((a, b) => b.valueCny - a.valueCny)
+    return { a, hk, us }
+  }, [positionsEnriched])
 
   // Options with CNY notional
   const optionsEnriched = useMemo(() =>
@@ -438,7 +474,6 @@ export default function App() {
     for (const p of positionsEnriched) {
       if (p.valueCny > 0) items.push({ name: p.name, value: p.valueCny })
     }
-    // group options
     const optTotal = optionsEnriched.reduce((s, o) => s + Math.abs(o.signedCny), 0)
     if (optTotal > 0) items.push({ name: '期权', value: optTotal })
     return items
@@ -478,23 +513,24 @@ export default function App() {
   // 股票仓位 = (场内股票持仓 + 场外股票基金) / 总资产
   const stockExposureValue = inMarketStockValue + OFFMARKET_STOCK_FUND
 
-  // 总资产 = 场内所有持仓市值(含黄金ETF) + 期权名义值 + 现金固收 + 实物黄金 + 场外股票基金
-  const totalAssets = totalCny + CASH_FIXED_INCOME + PHYSICAL_GOLD + OFFMARKET_STOCK_FUND
-
   const stockPositionRatio = totalAssets > 0 ? (stockExposureValue / totalAssets * 100) : 0
 
-  // 资产大类配置饼图
+  // 黄金合并: 黄金ETF + 实物黄金 (#3)
+  const totalGoldValue = goldEtfValue + PHYSICAL_GOLD
+
+  // 资产大类配置饼图 (#3: 黄金合并)
   const assetAllocationData = useMemo(() => {
     const items: { name: string; value: number }[] = []
     if (individualStockValue > 0) items.push({ name: '股票', value: individualStockValue })
-    // 基金 = 股票型ETF + 黄金ETF + 场外股票基金
-    const fundTotal = stockEtfValue + goldEtfValue + OFFMARKET_STOCK_FUND
+    // 基金 = 股票型ETF + 场外股票基金 (黄金ETF不再归入基金)
+    const fundTotal = stockEtfValue + OFFMARKET_STOCK_FUND
     if (fundTotal > 0) items.push({ name: '基金', value: fundTotal })
     if (optionAbsTotal > 0) items.push({ name: '期权', value: optionAbsTotal })
     items.push({ name: '现金固收', value: CASH_FIXED_INCOME })
-    if (PHYSICAL_GOLD > 0) items.push({ name: '实物黄金', value: PHYSICAL_GOLD })
+    // 黄金 = 黄金ETF + 实物黄金
+    if (totalGoldValue > 0) items.push({ name: '黄金', value: totalGoldValue })
     return items
-  }, [individualStockValue, stockEtfValue, goldEtfValue, optionAbsTotal])
+  }, [individualStockValue, stockEtfValue, optionAbsTotal, totalGoldValue])
 
   // Chart data
   const chartData = useMemo(() => {
@@ -639,6 +675,133 @@ export default function App() {
     showToast('已重置为默认数据')
   }
 
+  /* ────── AI Chat (#2) ────── */
+  const buildPortfolioContext = useCallback(() => {
+    const lines: string[] = []
+    lines.push(`当前持仓数据摘要：`)
+    lines.push(`总资产(含场外): ¥${fmtInt(totalAssets)}`)
+    lines.push(`场内持仓市值: ¥${fmtInt(totalCny)}`)
+    lines.push(`现金固收: ¥${fmtInt(CASH_FIXED_INCOME)} (${totalAssets > 0 ? (CASH_FIXED_INCOME / totalAssets * 100).toFixed(1) : '0'}%)`)
+    lines.push(`股票仓位: ${stockPositionRatio.toFixed(1)}% (¥${fmtInt(stockExposureValue)})`)
+    lines.push(`实物黄金: ¥${fmtInt(PHYSICAL_GOLD)}`)
+    lines.push(`场外股票基金: ¥${fmtInt(OFFMARKET_STOCK_FUND)}`)
+    lines.push(`\n各持仓详情 (按市值排序):`)
+    for (const p of positionsEnriched) {
+      lines.push(`  ${p.name}(${p.symbol}): ${fmtInt(p.qty)}股, 市值¥${fmtInt(p.valueCny)}, 占总资产${p.weight.toFixed(1)}%`)
+    }
+    lines.push(`\n期权持仓:`)
+    for (const o of optionsEnriched) {
+      lines.push(`  ${o.direction === 'Sell' ? '卖出' : '买入'} ${o.symbol} ${o.optionType} @${o.currSymbol}${o.strike}, 到期${o.expiry}, ${o.contracts}张`)
+    }
+    lines.push(`\n汇率: USD/CNY=${state.usdcny.toFixed(4)}, HKD/CNY=${state.hkdcny.toFixed(4)}`)
+    return lines.join('\n')
+  }, [totalAssets, totalCny, stockPositionRatio, stockExposureValue, positionsEnriched, optionsEnriched, state.usdcny, state.hkdcny])
+
+  const handleSendChat = useCallback(async () => {
+    const msg = chatInput.trim()
+    if (!msg || chatLoading) return
+    setChatInput('')
+    const newMessages: ChatMessage[] = [...chatMessages, { role: 'user', content: msg }]
+    setChatMessages(newMessages)
+    setChatLoading(true)
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_ANTHROPIC_API_KEY) || ''
+      const portfolioCtx = buildPortfolioContext()
+      const systemPrompt = INVESTMENT_SYSTEM_PROMPT + '\n\n' + portfolioCtx
+
+      const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }))
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2048,
+          system: systemPrompt,
+          messages: apiMessages,
+        }),
+      })
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(`API ${res.status}: ${errText}`)
+      }
+
+      const data = await res.json()
+      const assistantMsg = data.content?.[0]?.text || '抱歉，没有收到有效回复。'
+      setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMsg }])
+    } catch (e) {
+      console.error('Chat error', e)
+      const errorMsg = e instanceof Error ? e.message : '未知错误'
+      setChatMessages(prev => [...prev, { role: 'assistant', content: `请求失败: ${errorMsg}\n\n请确认已配置 VITE_ANTHROPIC_API_KEY 环境变量。` }])
+    } finally {
+      setChatLoading(false)
+    }
+  }, [chatInput, chatMessages, chatLoading, buildPortfolioContext])
+
+  /* ────── render helpers for grouped table (#5) ────── */
+  const renderMarketGroup = (label: string, positions: typeof positionsEnriched) => {
+    if (positions.length === 0) return null
+    return (
+      <>
+        <tr>
+          <td colSpan={6} style={{ background: 'var(--bg2)', fontWeight: 600, fontSize: '.82rem', padding: '6px 12px', color: 'var(--fg2)' }}>
+            {label}
+          </td>
+        </tr>
+        {positions.map(p => (
+          <tr key={p.id}>
+            <td>{p.symbol}</td>
+            <td>{p.name}</td>
+            <td className="r">{fmtInt(p.qty)}</td>
+            <td className="r">{p.lastPrice > 0 ? fmtNum(p.lastPrice) : '--'}</td>
+            <td className="r">¥{fmtInt(p.valueCny)}</td>
+            <td className="r">{p.weight.toFixed(1)}%</td>
+          </tr>
+        ))}
+      </>
+    )
+  }
+
+  const renderMarketGroupManage = (label: string, positions: typeof positionsEnriched) => {
+    if (positions.length === 0) return null
+    return (
+      <>
+        <tr>
+          <td colSpan={10} style={{ background: 'var(--bg2)', fontWeight: 600, fontSize: '.82rem', padding: '6px 12px', color: 'var(--fg2)' }}>
+            {label}
+          </td>
+        </tr>
+        {positions.map(p => (
+          <tr key={p.id}>
+            <td>{p.symbol}</td>
+            <td>{p.name}</td>
+            <td>{p.market}</td>
+            <td>{p.currency}</td>
+            <td className="r">{fmtInt(p.qty)}</td>
+            <td className="r">{p.lastPrice > 0 ? fmtNum(p.lastPrice) : '--'}</td>
+            <td className="r">¥{fmtInt(p.valueCny)}</td>
+            <td className="r">{p.weight.toFixed(1)}%</td>
+            <td style={{ fontSize: '.75rem', color: 'var(--fg2)' }}>{p.lastUpdated || '--'}</td>
+            <td>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button className="sm" onClick={() => { setEditingPosition(p); setEditDeltaQty('') }}>调仓</button>
+                <button className="sm danger" onClick={() => handleDeletePosition(p.id)}>删除</button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </>
+    )
+  }
+
   /* ────── render ────── */
   return (
     <div className="container" style={{ paddingBottom: 40 }}>
@@ -667,6 +830,53 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* ===== 投资哲学板块 (#1) ===== */}
+      <div className="section" style={{ marginTop: 12 }}>
+        <div className="section-header" style={{ cursor: 'pointer' }} onClick={() => setShowPhilosophy(!showPhilosophy)}>
+          <h2>投资哲学 {showPhilosophy ? '▾' : '▸'}</h2>
+        </div>
+        {showPhilosophy && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginTop: 8 }}>
+            <div className="card" style={{ borderLeft: '3px solid #2563eb' }}>
+              <div style={{ fontWeight: 600, fontSize: '.85rem', marginBottom: 6, color: '#2563eb' }}>🎯 核心目标</div>
+              <ul style={{ fontSize: '.78rem', lineHeight: 1.7, margin: 0, paddingLeft: 16, color: 'var(--fg2)' }}>
+                <li>追求复合增长</li>
+                <li>回归生活真自由</li>
+                <li>安全稳定现金流</li>
+                <li>人生只富一次</li>
+              </ul>
+            </div>
+            <div className="card" style={{ borderLeft: '3px solid #7c3aed' }}>
+              <div style={{ fontWeight: 600, fontSize: '.85rem', marginBottom: 6, color: '#7c3aed' }}>🧠 投资心法</div>
+              <ul style={{ fontSize: '.78rem', lineHeight: 1.7, margin: 0, paddingLeft: 16, color: 'var(--fg2)' }}>
+                <li>关注过程</li>
+                <li>克服贪婪恐惧</li>
+                <li>敬畏市场</li>
+                <li>不追平凡机会</li>
+              </ul>
+            </div>
+            <div className="card" style={{ borderLeft: '3px solid #ea580c' }}>
+              <div style={{ fontWeight: 600, fontSize: '.85rem', marginBottom: 6, color: '#ea580c' }}>📋 策略指南</div>
+              <ul style={{ fontSize: '.78rem', lineHeight: 1.7, margin: 0, paddingLeft: 16, color: 'var(--fg2)' }}>
+                <li>高筑墙广积粮缓称王</li>
+                <li>凯利公式建仓</li>
+                <li>25-75%动态仓位</li>
+                <li>能力圈内不懂不碰</li>
+              </ul>
+            </div>
+            <div className="card" style={{ borderLeft: '3px solid #16a34a' }}>
+              <div style={{ fontWeight: 600, fontSize: '.85rem', marginBottom: 6, color: '#16a34a' }}>♻️ 持续循环</div>
+              <ul style={{ fontSize: '.78rem', lineHeight: 1.7, margin: 0, paddingLeft: 16, color: 'var(--fg2)' }}>
+                <li>长期持有优质股权</li>
+                <li>现金流再投资</li>
+                <li>健康长寿延续复利</li>
+                <li>少做决策不频繁操作</li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* KPI Cards */}
       <div className="kpi-grid">
@@ -697,8 +907,8 @@ export default function App() {
       </div>
 
       {/* Nav tabs */}
-      <div style={{ display: 'flex', gap: 2, marginTop: 20, borderBottom: '2px solid var(--border)', paddingBottom: 0 }}>
-        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流']] as const).map(([key, label]) => (
+      <div style={{ display: 'flex', gap: 2, marginTop: 20, borderBottom: '2px solid var(--border)', paddingBottom: 0, flexWrap: 'wrap' }}>
+        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -749,8 +959,8 @@ export default function App() {
                 <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(OFFMARKET_STOCK_FUND)}</div>
               </div>
               <div className="card">
-                <div className="label">实物黄金</div>
-                <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(PHYSICAL_GOLD)}</div>
+                <div className="label">黄金 (ETF+实物)</div>
+                <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(totalGoldValue)}</div>
               </div>
               <div className="card">
                 <div className="label">期权名义值</div>
@@ -770,7 +980,7 @@ export default function App() {
                       label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(1)}%`}
                     >
                       {assetAllocationData.map((_, i) => (
-                        <Cell key={i} fill={['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#d97706'][i % 5]} />
+                        <Cell key={i} fill={ASSET_PIE_COLORS[i % ASSET_PIE_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => `¥${fmtInt(v)}`} />
@@ -796,7 +1006,18 @@ export default function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: 'var(--accent)' }}>
                     <span>股票仓位占比</span><span>{stockPositionRatio.toFixed(1)}%</span>
                   </div>
-                  <div style={{ marginTop: 12, color: 'var(--fg2)', fontSize: '.78rem' }}>
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fg2)' }}>
+                      <span>黄金ETF (159934)</span><span>¥{fmtInt(goldEtfValue)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fg2)' }}>
+                      <span>实物黄金</span><span>¥{fmtInt(PHYSICAL_GOLD)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                      <span>黄金合计</span><span>¥{fmtInt(totalGoldValue)}</span>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 8, color: 'var(--fg2)', fontSize: '.78rem' }}>
                     注: 黄金ETF (159934) 不计入股票仓位
                   </div>
                 </div>
@@ -835,7 +1056,7 @@ export default function App() {
           {pieData.length > 0 && (
             <div className="pie-wrap">
               <div className="card">
-                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>资产配置</h2>
+                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>场内持仓配置</h2>
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2}>
@@ -849,13 +1070,13 @@ export default function App() {
                 </ResponsiveContainer>
               </div>
               <div className="card">
-                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>持仓占比</h2>
-                {positionsEnriched.slice(0, 8).map(p => (
+                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>持仓占比 (占总资产)</h2>
+                {positionsEnriched.slice(0, 10).map(p => (
                   <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', fontSize: '.82rem' }}>
                     <span>{p.name}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 80, height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.min(p.weight, 100)}%`, height: '100%', background: 'var(--accent)', borderRadius: 3 }} />
+                        <div style={{ width: `${Math.min(p.weight * 2, 100)}%`, height: '100%', background: 'var(--accent)', borderRadius: 3 }} />
                       </div>
                       <span style={{ width: 45, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{p.weight.toFixed(1)}%</span>
                     </div>
@@ -865,7 +1086,7 @@ export default function App() {
             </div>
           )}
 
-          {/* Quick position table */}
+          {/* Quick position table grouped by market (#5) */}
           <div className="section">
             <div className="section-header">
               <h2>股票持仓概览</h2>
@@ -879,16 +1100,9 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {positionsEnriched.map(p => (
-                    <tr key={p.id}>
-                      <td>{p.symbol}</td>
-                      <td>{p.name}</td>
-                      <td className="r">{fmtInt(p.qty)}</td>
-                      <td className="r">{p.lastPrice > 0 ? fmtNum(p.lastPrice) : '--'}</td>
-                      <td className="r">¥{fmtInt(p.valueCny)}</td>
-                      <td className="r">{p.weight.toFixed(1)}%</td>
-                    </tr>
-                  ))}
+                  {renderMarketGroup('A股 / 基金', positionsGrouped.a)}
+                  {renderMarketGroup('港股', positionsGrouped.hk)}
+                  {renderMarketGroup('美股', positionsGrouped.us)}
                 </tbody>
               </table>
             </div>
@@ -946,25 +1160,9 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {positionsEnriched.map(p => (
-                  <tr key={p.id}>
-                    <td>{p.symbol}</td>
-                    <td>{p.name}</td>
-                    <td>{p.market}</td>
-                    <td>{p.currency}</td>
-                    <td className="r">{fmtInt(p.qty)}</td>
-                    <td className="r">{p.lastPrice > 0 ? fmtNum(p.lastPrice) : '--'}</td>
-                    <td className="r">¥{fmtInt(p.valueCny)}</td>
-                    <td className="r">{p.weight.toFixed(1)}%</td>
-                    <td style={{ fontSize: '.75rem', color: 'var(--fg2)' }}>{p.lastUpdated || '--'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="sm" onClick={() => { setEditingPosition(p); setEditDeltaQty('') }}>调仓</button>
-                        <button className="sm danger" onClick={() => handleDeletePosition(p.id)}>删除</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {renderMarketGroupManage('A股 / 基金', positionsGrouped.a)}
+                {renderMarketGroupManage('港股', positionsGrouped.hk)}
+                {renderMarketGroupManage('美股', positionsGrouped.us)}
               </tbody>
             </table>
           </div>
@@ -1066,6 +1264,70 @@ export default function App() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ===== AI ADVISOR TAB (#2) ===== */}
+      {tab === 'advisor' && (
+        <div className="section" style={{ marginTop: 16 }}>
+          <div className="section-header">
+            <h2>AI 投资顾问</h2>
+          </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 16px', fontSize: '.78rem', color: 'var(--fg2)', background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
+              基于你的投资哲学和当前持仓数据，AI将为你提供个性化投资建议。请配置 <code>VITE_ANTHROPIC_API_KEY</code> 环境变量。
+            </div>
+            {/* Chat messages area */}
+            <div style={{ height: 420, overflowY: 'auto', padding: 16 }}>
+              {chatMessages.length === 0 && (
+                <div style={{ textAlign: 'center', color: 'var(--fg2)', fontSize: '.85rem', marginTop: 60 }}>
+                  <div style={{ fontSize: '2rem', marginBottom: 12 }}>🤖</div>
+                  <div>你好，Arthur。我是你的AI投资顾问。</div>
+                  <div style={{ marginTop: 4 }}>你可以问我关于投资决策、仓位调整、标的分析等问题。</div>
+                  <div style={{ marginTop: 4, fontSize: '.78rem' }}>我会严格基于你的投资原则给出建议。</div>
+                </div>
+              )}
+              {chatMessages.map((m, i) => (
+                <div key={i} style={{
+                  display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+                  marginBottom: 12,
+                }}>
+                  <div style={{
+                    maxWidth: '80%', padding: '10px 14px', borderRadius: 12,
+                    fontSize: '.85rem', lineHeight: 1.6, whiteSpace: 'pre-wrap',
+                    background: m.role === 'user' ? 'var(--accent)' : 'var(--bg2)',
+                    color: m.role === 'user' ? '#fff' : 'var(--fg)',
+                    borderBottomRightRadius: m.role === 'user' ? 4 : 12,
+                    borderBottomLeftRadius: m.role === 'assistant' ? 4 : 12,
+                  }}>
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
+                  <div style={{ padding: '10px 14px', borderRadius: 12, background: 'var(--bg2)', fontSize: '.85rem' }}>
+                    <span className="spinner" style={{ marginRight: 6 }}></span>思考中...
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            {/* Chat input */}
+            <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg2)' }}>
+              <input
+                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--fg)', fontSize: '.85rem' }}
+                placeholder="输入你的投资问题..."
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendChat() } }}
+                disabled={chatLoading}
+              />
+              <button className="primary" onClick={handleSendChat} disabled={chatLoading || !chatInput.trim()}>
+                发送
+              </button>
+            </div>
           </div>
         </div>
       )}
