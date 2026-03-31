@@ -256,14 +256,48 @@ async function fetchHKPrices(symbols: string[]): Promise<Record<string, number>>
 async function fetchUSPrices(symbols: string[]): Promise<Record<string, number>> {
   if (!symbols.length) return {}
   const prices: Record<string, number> = {}
-  for (const sym of symbols) {
+
+  // Primary: Tencent Finance (same source as A-shares / HK)
+  try {
+    const tencentCodes = symbols.map(s => 'us' + s)
+    const r = await fetchWithProxy(`https://qt.gtimg.cn/q=${tencentCodes.join(',')}`)
+    const text = await r.text()
+    text.split('\n').forEach(line => {
+      if (!line.trim()) return
+      const m = line.match(/v_us(\w+?)="(.*?)"/)
+      if (!m) return
+      const sym = m[1]
+      const fields = m[2].split('~')
+      const price = parseFloat(fields[3])
+      if (!isNaN(price) && price > 0 && symbols.includes(sym)) {
+        prices[sym] = price
+      }
+    })
+  } catch (e) { console.warn('US Tencent fetch failed', e) }
+
+  // Fallback: Sina Finance for any symbols still missing
+  const missing = symbols.filter(s => !(s in prices))
+  if (missing.length > 0) {
     try {
-      const r = await fetchWithProxy(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`)
-      const d = await r.json()
-      const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice
-      if (price && !isNaN(price)) prices[sym] = price
-    } catch (e) { console.warn(`US fetch failed for ${sym}`, e) }
+      const sinaCodes = missing.map(s => 'gb_' + s.toLowerCase())
+      const r = await fetchWithProxy(
+        `https://hq.sinajs.cn/list=${sinaCodes.join(',')}`,
+      )
+      const text = await r.text()
+      text.split('\n').forEach(line => {
+        if (!line.trim()) return
+        const m = line.match(/hq_str_gb_(\w+)="(.*?)"/)
+        if (!m) return
+        const sym = m[1].toUpperCase()
+        const fields = m[2].split(',')
+        const price = parseFloat(fields[1])
+        if (!isNaN(price) && price > 0 && symbols.includes(sym)) {
+          prices[sym] = price
+        }
+      })
+    } catch (e) { console.warn('US Sina fallback failed', e) }
   }
+
   return prices
 }
 
@@ -373,6 +407,10 @@ export default function App() {
       const allPrices = { ...aPrices, ...hkPrices, ...usPrices }
       const now = today()
 
+      // Count how many symbols failed
+      const allSyms = [...aSyms, ...hkSyms, ...usSyms]
+      const failedSyms = allSyms.filter(s => !(s in allPrices))
+
       update(s => {
         const newPositions = s.positions.map(p => {
           const price = allPrices[p.symbol]
@@ -406,7 +444,11 @@ export default function App() {
         }
       })
 
-      showToast('价格和汇率已刷新')
+      if (failedSyms.length > 0) {
+        showToast(`已刷新，${failedSyms.length} 只取价失败: ${failedSyms.join(', ')}`)
+      } else {
+        showToast('价格和汇率已刷新')
+      }
     } catch (e) {
       console.error('Refresh failed', e)
       showToast('刷新失败，请稍后重试')
@@ -746,6 +788,22 @@ export default function App() {
     }
   }, [chatInput, chatMessages, chatLoading, buildPortfolioContext])
 
+  /* ────── price display helper ────── */
+  const priceFailed = (p: { lastPrice: number }) => p.lastPrice <= 0 && !!state.lastRefresh
+  const renderPrice = (p: { lastPrice: number }) => {
+    if (p.lastPrice > 0) return fmtNum(p.lastPrice)
+    if (state.lastRefresh) return <span style={{ color: '#ef4444', fontSize: '.78rem' }}>获取失败</span>
+    return '--'
+  }
+  const renderValuation = (p: { lastPrice: number; valueCny: number }) => {
+    if (priceFailed(p)) return <span style={{ color: '#ef4444', fontSize: '.78rem' }}>–</span>
+    return `¥${fmtInt(p.valueCny)}`
+  }
+  const renderWeight = (p: { lastPrice: number; weight: number }) => {
+    if (priceFailed(p)) return <span style={{ color: '#ef4444', fontSize: '.78rem' }}>–</span>
+    return `${p.weight.toFixed(1)}%`
+  }
+
   /* ────── render helpers for grouped table (#5) ────── */
   const renderMarketGroup = (label: string, positions: typeof positionsEnriched) => {
     if (positions.length === 0) return null
@@ -761,9 +819,9 @@ export default function App() {
             <td>{p.symbol}</td>
             <td>{p.name}</td>
             <td className="r">{fmtInt(p.qty)}</td>
-            <td className="r">{p.lastPrice > 0 ? fmtNum(p.lastPrice) : '--'}</td>
-            <td className="r">¥{fmtInt(p.valueCny)}</td>
-            <td className="r">{p.weight.toFixed(1)}%</td>
+            <td className="r">{renderPrice(p)}</td>
+            <td className="r">{renderValuation(p)}</td>
+            <td className="r">{renderWeight(p)}</td>
           </tr>
         ))}
       </>
@@ -786,9 +844,9 @@ export default function App() {
             <td>{p.market}</td>
             <td>{p.currency}</td>
             <td className="r">{fmtInt(p.qty)}</td>
-            <td className="r">{p.lastPrice > 0 ? fmtNum(p.lastPrice) : '--'}</td>
-            <td className="r">¥{fmtInt(p.valueCny)}</td>
-            <td className="r">{p.weight.toFixed(1)}%</td>
+            <td className="r">{renderPrice(p)}</td>
+            <td className="r">{renderValuation(p)}</td>
+            <td className="r">{renderWeight(p)}</td>
             <td style={{ fontSize: '.75rem', color: 'var(--fg2)' }}>{p.lastUpdated || '--'}</td>
             <td>
               <div style={{ display: 'flex', gap: 4 }}>
