@@ -55,6 +55,9 @@ interface AppState {
   lastRefresh: string
   usdcny: number
   hkdcny: number
+  cashFixed: number       // 现金固收 (CNY)
+  physicalGold: number    // 实物黄金 (CNY)
+  offmarketFund: number   // 场外股票基金 (CNY)
 }
 
 interface ChatMessage {
@@ -67,10 +70,10 @@ const EPOCH_DATE = '2026-03-06'
 const INITIAL_SHARES = 10000
 const INITIAL_NAV = 1.0
 
-/* ────────── 静态资产常量 (CNY) ────────── */
-const CASH_FIXED_INCOME = 48_000_000   // 现金固收 4800万
-const PHYSICAL_GOLD = 1_080_000         // 实物黄金 108万
-const OFFMARKET_STOCK_FUND = 3_200_000  // 场外股票基金 320万
+/* ────────── 静态资产默认值 (CNY) ────────── */
+const DEFAULT_CASH_FIXED = 48_000_000   // 现金固收 4800万
+const DEFAULT_PHYSICAL_GOLD = 1_080_000  // 实物黄金 108万
+const DEFAULT_OFFMARKET_FUND = 3_200_000 // 场外股票基金 320万
 
 /* 股票型 ETF 代码（算入股票仓位） */
 const STOCK_TYPE_ETF_SYMBOLS = new Set(['510900.SH', '159941.SZ', '513050.SH'])
@@ -136,16 +139,6 @@ function fmtInt(n: number) { return n.toLocaleString('zh-CN', { maximumFractionD
 
 /* ────────── localStorage helpers ────────── */
 const LS_KEY = 'portfoliolab_state'
-function loadState(): AppState | null {
-  try {
-    const raw = localStorage.getItem(LS_KEY)
-    if (raw) return JSON.parse(raw) as AppState
-  } catch { /* ignore */ }
-  return null
-}
-function saveState(s: AppState) {
-  localStorage.setItem(LS_KEY, JSON.stringify(s))
-}
 
 function buildInitialState(): AppState {
   return {
@@ -158,7 +151,29 @@ function buildInitialState(): AppState {
     lastRefresh: '',
     usdcny: 7.25,
     hkdcny: 0.93,
+    cashFixed: DEFAULT_CASH_FIXED,
+    physicalGold: DEFAULT_PHYSICAL_GOLD,
+    offmarketFund: DEFAULT_OFFMARKET_FUND,
   }
+}
+
+/* Migrate old state: add missing fields with defaults */
+function migrateState(s: AppState): AppState {
+  if (s.cashFixed === undefined) s.cashFixed = DEFAULT_CASH_FIXED
+  if (s.physicalGold === undefined) s.physicalGold = DEFAULT_PHYSICAL_GOLD
+  if (s.offmarketFund === undefined) s.offmarketFund = DEFAULT_OFFMARKET_FUND
+  return s
+}
+
+function loadState(): AppState | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (raw) return migrateState(JSON.parse(raw) as AppState)
+  } catch { /* ignore */ }
+  return null
+}
+function saveState(s: AppState) {
+  localStorage.setItem(LS_KEY, JSON.stringify(s))
 }
 
 /* ────────── CORS proxy helper ────────── */
@@ -362,6 +377,8 @@ export default function App() {
 
   // Philosophy section toggle
   const [showPhilosophy, setShowPhilosophy] = useState(true)
+  const [editingOffmarket, setEditingOffmarket] = useState(false)
+  const [offmarketEdit, setOffmarketEdit] = useState({ cashFixed: '', physicalGold: '', offmarketFund: '' })
 
   // Persist
   useEffect(() => { saveState(state) }, [state])
@@ -475,7 +492,7 @@ export default function App() {
   const sinceInception = ((displayNav / INITIAL_NAV) - 1) * 100
 
   // 总资产 = 场内所有持仓市值 + 现金固收 + 实物黄金 + 场外股票基金
-  const totalAssets = totalCny + CASH_FIXED_INCOME + PHYSICAL_GOLD + OFFMARKET_STOCK_FUND
+  const totalAssets = totalCny + state.cashFixed + state.physicalGold + state.offmarketFund
 
   // Positions with CNY value — weight based on totalAssets (#4)
   const positionsEnriched = useMemo(() =>
@@ -553,26 +570,26 @@ export default function App() {
   const inMarketStockValue = individualStockValue + stockEtfValue
 
   // 股票仓位 = (场内股票持仓 + 场外股票基金) / 总资产
-  const stockExposureValue = inMarketStockValue + OFFMARKET_STOCK_FUND
+  const stockExposureValue = inMarketStockValue + state.offmarketFund
 
   const stockPositionRatio = totalAssets > 0 ? (stockExposureValue / totalAssets * 100) : 0
 
   // 黄金合并: 黄金ETF + 实物黄金 (#3)
-  const totalGoldValue = goldEtfValue + PHYSICAL_GOLD
+  const totalGoldValue = goldEtfValue + state.physicalGold
 
   // 资产大类配置饼图 (#3: 黄金合并)
   const assetAllocationData = useMemo(() => {
     const items: { name: string; value: number }[] = []
     if (individualStockValue > 0) items.push({ name: '股票', value: individualStockValue })
     // 基金 = 股票型ETF + 场外股票基金 (黄金ETF不再归入基金)
-    const fundTotal = stockEtfValue + OFFMARKET_STOCK_FUND
+    const fundTotal = stockEtfValue + state.offmarketFund
     if (fundTotal > 0) items.push({ name: '基金', value: fundTotal })
     if (optionAbsTotal > 0) items.push({ name: '期权', value: optionAbsTotal })
-    items.push({ name: '现金固收', value: CASH_FIXED_INCOME })
+    items.push({ name: '现金固收', value: state.cashFixed })
     // 黄金 = 黄金ETF + 实物黄金
     if (totalGoldValue > 0) items.push({ name: '黄金', value: totalGoldValue })
     return items
-  }, [individualStockValue, stockEtfValue, optionAbsTotal, totalGoldValue])
+  }, [individualStockValue, stockEtfValue, optionAbsTotal, totalGoldValue, state.cashFixed, state.offmarketFund])
 
   // Chart data
   const chartData = useMemo(() => {
@@ -653,6 +670,25 @@ export default function App() {
     showToast('已删除')
   }
 
+  /* ────── off-market assets ────── */
+  const openOffmarketEdit = () => {
+    setOffmarketEdit({
+      cashFixed: state.cashFixed.toString(),
+      physicalGold: state.physicalGold.toString(),
+      offmarketFund: state.offmarketFund.toString(),
+    })
+    setEditingOffmarket(true)
+  }
+  const handleSaveOffmarket = () => {
+    const cf = parseFloat(offmarketEdit.cashFixed)
+    const pg = parseFloat(offmarketEdit.physicalGold)
+    const om = parseFloat(offmarketEdit.offmarketFund)
+    if ([cf, pg, om].some(v => isNaN(v) || v < 0)) { showToast('请输入有效金额'); return }
+    update(s => ({ ...s, cashFixed: cf, physicalGold: pg, offmarketFund: om }))
+    setEditingOffmarket(false)
+    showToast('场外资产已更新')
+  }
+
   /* ────── cashflow (unitization) ────── */
   const [newCF, setNewCF] = useState({ type: 'inflow' as 'inflow' | 'outflow', amount: '', note: '' })
   const handleCashFlow = () => {
@@ -723,10 +759,10 @@ export default function App() {
     lines.push(`当前持仓数据摘要：`)
     lines.push(`总资产(含场外): ¥${fmtInt(totalAssets)}`)
     lines.push(`场内持仓市值: ¥${fmtInt(totalCny)}`)
-    lines.push(`现金固收: ¥${fmtInt(CASH_FIXED_INCOME)} (${totalAssets > 0 ? (CASH_FIXED_INCOME / totalAssets * 100).toFixed(1) : '0'}%)`)
+    lines.push(`现金固收: ¥${fmtInt(state.cashFixed)} (${totalAssets > 0 ? (state.cashFixed / totalAssets * 100).toFixed(1) : '0'}%)`)
     lines.push(`股票仓位: ${stockPositionRatio.toFixed(1)}% (¥${fmtInt(stockExposureValue)})`)
-    lines.push(`实物黄金: ¥${fmtInt(PHYSICAL_GOLD)}`)
-    lines.push(`场外股票基金: ¥${fmtInt(OFFMARKET_STOCK_FUND)}`)
+    lines.push(`实物黄金: ¥${fmtInt(state.physicalGold)}`)
+    lines.push(`场外股票基金: ¥${fmtInt(state.offmarketFund)}`)
     lines.push(`\n各持仓详情 (按市值排序):`)
     for (const p of positionsEnriched) {
       lines.push(`  ${p.name}(${p.symbol}): ${fmtInt(p.qty)}股, 市值¥${fmtInt(p.valueCny)}, 占总资产${p.weight.toFixed(1)}%`)
@@ -737,7 +773,7 @@ export default function App() {
     }
     lines.push(`\n汇率: USD/CNY=${state.usdcny.toFixed(4)}, HKD/CNY=${state.hkdcny.toFixed(4)}`)
     return lines.join('\n')
-  }, [totalAssets, totalCny, stockPositionRatio, stockExposureValue, positionsEnriched, optionsEnriched, state.usdcny, state.hkdcny])
+  }, [totalAssets, totalCny, stockPositionRatio, stockExposureValue, positionsEnriched, optionsEnriched, state.usdcny, state.hkdcny, state.cashFixed, state.physicalGold, state.offmarketFund])
 
   const handleSendChat = useCallback(async () => {
     const msg = chatInput.trim()
@@ -1003,8 +1039,8 @@ export default function App() {
               </div>
               <div className="card">
                 <div className="label">现金固收</div>
-                <div className="value" style={{ fontSize: '1.3rem' }}>¥{fmtInt(CASH_FIXED_INCOME)}</div>
-                <div className="sub">{totalAssets > 0 ? (CASH_FIXED_INCOME / totalAssets * 100).toFixed(1) : '0.0'}%</div>
+                <div className="value" style={{ fontSize: '1.3rem' }}>¥{fmtInt(state.cashFixed)}</div>
+                <div className="sub">{totalAssets > 0 ? (state.cashFixed / totalAssets * 100).toFixed(1) : '0.0'}%</div>
               </div>
             </div>
             <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginTop: 8 }}>
@@ -1014,7 +1050,7 @@ export default function App() {
               </div>
               <div className="card">
                 <div className="label">场外股票基金</div>
-                <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(OFFMARKET_STOCK_FUND)}</div>
+                <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(state.offmarketFund)}</div>
               </div>
               <div className="card">
                 <div className="label">黄金 (ETF+实物)</div>
@@ -1056,7 +1092,7 @@ export default function App() {
                     <span>股票型ETF (510900/159941/513050)</span><span>¥{fmtInt(stockEtfValue)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>场外股票基金</span><span>¥{fmtInt(OFFMARKET_STOCK_FUND)}</span>
+                    <span>场外股票基金</span><span>¥{fmtInt(state.offmarketFund)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 6, fontWeight: 600 }}>
                     <span>股票敞口合计</span><span>¥{fmtInt(stockExposureValue)}</span>
@@ -1069,7 +1105,7 @@ export default function App() {
                       <span>黄金ETF (159934)</span><span>¥{fmtInt(goldEtfValue)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fg2)' }}>
-                      <span>实物黄金</span><span>¥{fmtInt(PHYSICAL_GOLD)}</span>
+                      <span>实物黄金</span><span>¥{fmtInt(state.physicalGold)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
                       <span>黄金合计</span><span>¥{fmtInt(totalGoldValue)}</span>
@@ -1223,6 +1259,51 @@ export default function App() {
                 {renderMarketGroupManage('美股', positionsGrouped.us)}
               </tbody>
             </table>
+          </div>
+
+          {/* 场外资产管理 */}
+          <div className="section-header" style={{ marginTop: 24 }}>
+            <h2>场外资产</h2>
+            {!editingOffmarket && <button className="primary" onClick={openOffmarketEdit}>编辑</button>}
+          </div>
+          <div className="card" style={{ marginTop: 8 }}>
+            {!editingOffmarket ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                <div>
+                  <div className="label">现金固收</div>
+                  <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>¥{fmtInt(state.cashFixed)}</div>
+                </div>
+                <div>
+                  <div className="label">实物黄金</div>
+                  <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>¥{fmtInt(state.physicalGold)}</div>
+                </div>
+                <div>
+                  <div className="label">场外股票基金</div>
+                  <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>¥{fmtInt(state.offmarketFund)}</div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  <div className="field">
+                    <label>现金固收 (CNY)</label>
+                    <input type="number" value={offmarketEdit.cashFixed} onChange={e => setOffmarketEdit({ ...offmarketEdit, cashFixed: e.target.value })} />
+                  </div>
+                  <div className="field">
+                    <label>实物黄金 (CNY)</label>
+                    <input type="number" value={offmarketEdit.physicalGold} onChange={e => setOffmarketEdit({ ...offmarketEdit, physicalGold: e.target.value })} />
+                  </div>
+                  <div className="field">
+                    <label>场外股票基金 (CNY)</label>
+                    <input type="number" value={offmarketEdit.offmarketFund} onChange={e => setOffmarketEdit({ ...offmarketEdit, offmarketFund: e.target.value })} />
+                  </div>
+                </div>
+                <div className="actions" style={{ marginTop: 12 }}>
+                  <button onClick={() => setEditingOffmarket(false)}>取消</button>
+                  <button className="primary" onClick={handleSaveOffmarket}>保存</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
