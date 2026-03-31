@@ -25,6 +25,7 @@ interface OptionPosition {
   direction: 'Buy' | 'Sell'
   contracts: number    // num contracts (each = 100 shares)
   markPrice: number    // per-share mark price
+  currency: 'USD' | 'HKD' // option denomination currency
   lastUpdated: string
 }
 
@@ -62,19 +63,38 @@ const INITIAL_SHARES = 10000
 const INITIAL_NAV = 1.0
 
 const defaultPositions: Position[] = [
-  { id: 's1', symbol: 'TSLA', name: '特斯拉', qty: 1815, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
-  { id: 's2', symbol: 'GOOG', name: '谷歌', qty: 1550, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
-  { id: 's3', symbol: '00700.HK', name: '腾讯控股', qty: 4800, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
-  { id: 's4', symbol: '600519.SH', name: '贵州茅台', qty: 200, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
-  { id: 's5', symbol: '300750.SZ', name: '宁德时代', qty: 1500, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
-  { id: 's6', symbol: '600036.SH', name: '招商银行', qty: 20000, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
-  { id: 's7', symbol: '03968.HK', name: '招商银行H', qty: 10000, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  // A股 / 基金
+  { id: 's1', symbol: '600036.SH', name: '招商银行', qty: 455400, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's2', symbol: '300750.SZ', name: '宁德时代', qty: 12400, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's3', symbol: '159934.SZ', name: '黄金ETF易方达', qty: 95721, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's4', symbol: '002027.SZ', name: '分众传媒', qty: 463100, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's5', symbol: '510900.SH', name: '恒生中国企业ETF', qty: 300000, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's6', symbol: '159941.SZ', name: '纳指ETF广发', qty: 100000, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's7', symbol: '513050.SH', name: '中概互联网ETF', qty: 600000, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's8', symbol: '300059.SZ', name: '东方财富', qty: 10000, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's9', symbol: '600519.SH', name: '贵州茅台', qty: 2800, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  // 港股
+  { id: 'h1', symbol: '00700.HK', name: '腾讯控股', qty: 32900, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  { id: 'h2', symbol: '03968.HK', name: '招商银行H', qty: 18000, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  { id: 'h3', symbol: '00939.HK', name: '建设银行', qty: 9000, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  { id: 'h4', symbol: '01810.HK', name: '小米集团', qty: 10000, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  { id: 'h5', symbol: '09660.HK', name: '地平线机器人', qty: 9400, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  { id: 'h6', symbol: '09888.HK', name: '百度集团', qty: 5300, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  { id: 'h7', symbol: '03690.HK', name: '美团', qty: 3490, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  { id: 'h8', symbol: '09988.HK', name: '阿里巴巴', qty: 15200, currency: 'HKD', market: 'HK', lastPrice: 0, lastUpdated: '' },
+  // 美股
+  { id: 'u1', symbol: 'TSLA', name: '特斯拉', qty: 1815, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
+  { id: 'u2', symbol: 'NVDA', name: '英伟达', qty: 210, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
+  { id: 'u3', symbol: 'AAPL', name: '苹果', qty: 100, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
+  { id: 'u4', symbol: 'LMND', name: 'Lemonade', qty: 200, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
+  { id: 'u5', symbol: 'GOOG', name: '谷歌', qty: 100, currency: 'USD', market: 'US', lastPrice: 0, lastUpdated: '' },
 ]
 
 const defaultOptions: OptionPosition[] = [
-  { id: 'o1', symbol: 'GOOG', optionType: 'Put', strike: 285, expiry: '2026-05-15', direction: 'Sell', contracts: 1, markPrice: 14.00, lastUpdated: '' },
-  { id: 'o2', symbol: 'TSLA', optionType: 'Put', strike: 425, expiry: '2026-06-18', direction: 'Sell', contracts: 1, markPrice: 49.38, lastUpdated: '' },
-  { id: 'o3', symbol: 'TSLA', optionType: 'Put', strike: 400, expiry: '2026-08-21', direction: 'Sell', contracts: 1, markPrice: 47.30, lastUpdated: '' },
+  { id: 'o1', symbol: 'GOOG', optionType: 'Put', strike: 285, expiry: '2026-05-15', direction: 'Sell', contracts: 1, markPrice: 0, currency: 'USD', lastUpdated: '' },
+  { id: 'o2', symbol: 'TSLA', optionType: 'Put', strike: 425, expiry: '2026-06-18', direction: 'Sell', contracts: 1, markPrice: 0, currency: 'USD', lastUpdated: '' },
+  { id: 'o3', symbol: 'TSLA', optionType: 'Put', strike: 400, expiry: '2026-08-21', direction: 'Sell', contracts: 1, markPrice: 0, currency: 'USD', lastUpdated: '' },
+  { id: 'o4', symbol: '00700.HK', optionType: 'Put', strike: 450, expiry: '2026-09-29', direction: 'Sell', contracts: 1, markPrice: 0, currency: 'HKD', lastUpdated: '' },
 ]
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
@@ -233,16 +253,11 @@ function calcTotalValueCny(
     else if (p.currency === 'HKD') val *= hkdcny
     total += val
   }
-  // Options: notional = contracts * 100 * markPrice * direction_sign * USD→CNY
+  // Options: notional = contracts * 100 * markPrice * direction_sign * FX→CNY
   for (const o of options) {
     const sign = o.direction === 'Sell' ? -1 : 1
-    // For sold puts: we received premium, so the liability is current mark price
-    // Mark-to-market value of position from holder's perspective
-    const notional = sign * o.contracts * 100 * o.markPrice * usdcny
-    // Selling a put = negative liability (we owe them, so subtract from NAV if mark is high)
-    // If we sold a put and mark goes down → we profit → positive contribution
-    // Simplified: for sold options, the value impact is -(contracts * 100 * markPrice * usdcny)
-    // For bought options, value impact is +(contracts * 100 * markPrice * usdcny)
+    const fxRate = o.currency === 'HKD' ? hkdcny : usdcny
+    const notional = sign * o.contracts * 100 * o.markPrice * fxRate
     total += notional
   }
   return total
@@ -397,12 +412,14 @@ export default function App() {
   // Options with CNY notional
   const optionsEnriched = useMemo(() =>
     state.options.map(o => {
-      const notionalUsd = o.contracts * 100 * o.markPrice
-      const notionalCny = notionalUsd * state.usdcny
+      const fxRate = o.currency === 'HKD' ? state.hkdcny : state.usdcny
+      const notionalLocal = o.contracts * 100 * o.markPrice
+      const notionalCny = notionalLocal * fxRate
       const sign = o.direction === 'Sell' ? -1 : 1
-      return { ...o, notionalUsd, notionalCny, signedCny: sign * notionalCny }
+      const currSymbol = o.currency === 'HKD' ? 'HK$' : '$'
+      return { ...o, notionalLocal, notionalCny, signedCny: sign * notionalCny, currSymbol }
     }),
-    [state.options, state.usdcny]
+    [state.options, state.usdcny, state.hkdcny]
   )
 
   // Pie data
@@ -470,7 +487,7 @@ export default function App() {
   }
 
   /* ────── add option ────── */
-  const [newOpt, setNewOpt] = useState({ symbol: '', optionType: 'Put' as 'Put' | 'Call', strike: '', expiry: '', direction: 'Sell' as 'Buy' | 'Sell', contracts: '1', markPrice: '' })
+  const [newOpt, setNewOpt] = useState({ symbol: '', optionType: 'Put' as 'Put' | 'Call', strike: '', expiry: '', direction: 'Sell' as 'Buy' | 'Sell', contracts: '1', markPrice: '', currency: 'USD' as 'USD' | 'HKD' })
   const handleAddOption = () => {
     const strike = parseFloat(newOpt.strike)
     const mark = parseFloat(newOpt.markPrice)
@@ -481,10 +498,10 @@ export default function App() {
       options: [...s.options, {
         id: genId(), symbol: newOpt.symbol.toUpperCase(), optionType: newOpt.optionType,
         strike, expiry: newOpt.expiry, direction: newOpt.direction,
-        contracts, markPrice: isNaN(mark) ? 0 : mark, lastUpdated: today(),
+        contracts, markPrice: isNaN(mark) ? 0 : mark, currency: newOpt.currency, lastUpdated: today(),
       }]
     }))
-    setNewOpt({ symbol: '', optionType: 'Put', strike: '', expiry: '', direction: 'Sell', contracts: '1', markPrice: '' })
+    setNewOpt({ symbol: '', optionType: 'Put', strike: '', expiry: '', direction: 'Sell', contracts: '1', markPrice: '', currency: 'USD' })
     setShowAddOption(false)
     showToast('已添加期权')
   }
@@ -748,10 +765,10 @@ export default function App() {
                         <td>{o.symbol}</td>
                         <td><span className={`badge badge-${o.direction.toLowerCase()}`}>{o.direction === 'Sell' ? '卖出' : '买入'}</span></td>
                         <td><span className={`badge badge-${o.optionType.toLowerCase()}`}>{o.optionType}</span></td>
-                        <td className="r">${fmtNum(o.strike)}</td>
+                        <td className="r">{o.currSymbol}{fmtNum(o.strike)}</td>
                         <td>{o.expiry}</td>
                         <td className="r">{o.contracts}</td>
-                        <td className="r">${fmtNum(o.markPrice)}</td>
+                        <td className="r">{o.currSymbol}{fmtNum(o.markPrice)}</td>
                         <td className="r">¥{fmtInt(Math.abs(o.signedCny))}</td>
                       </tr>
                     ))}
@@ -818,7 +835,7 @@ export default function App() {
                 <tr>
                   <th>标的</th><th>方向</th><th>类型</th><th className="r">行权价</th>
                   <th>到期日</th><th className="r">合约数</th><th className="r">Mark价格</th>
-                  <th className="r">名义(USD)</th><th className="r">名义(CNY)</th><th>操作</th>
+                  <th className="r">名义值</th><th className="r">名义(CNY)</th><th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -827,11 +844,11 @@ export default function App() {
                     <td>{o.symbol}</td>
                     <td><span className={`badge badge-${o.direction.toLowerCase()}`}>{o.direction === 'Sell' ? '卖出' : '买入'}</span></td>
                     <td><span className={`badge badge-${o.optionType.toLowerCase()}`}>{o.optionType}</span></td>
-                    <td className="r">${fmtNum(o.strike)}</td>
+                    <td className="r">{o.currSymbol}{fmtNum(o.strike)}</td>
                     <td>{o.expiry}</td>
                     <td className="r">{o.contracts}</td>
-                    <td className="r">${fmtNum(o.markPrice)}</td>
-                    <td className="r">${fmtInt(o.notionalUsd)}</td>
+                    <td className="r">{o.currSymbol}{fmtNum(o.markPrice)}</td>
+                    <td className="r">{o.currSymbol}{fmtInt(o.notionalLocal)}</td>
                     <td className="r">¥{fmtInt(Math.abs(o.signedCny))}</td>
                     <td>
                       <button className="sm danger" onClick={() => handleDeleteOption(o.id)}>删除</button>
@@ -1021,7 +1038,7 @@ export default function App() {
                 <input type="date" value={newOpt.expiry} onChange={e => setNewOpt({ ...newOpt, expiry: e.target.value })} />
               </div>
             </div>
-            <div className="row">
+            <div className="row3">
               <div className="field">
                 <label>合约数</label>
                 <input type="number" placeholder="1" value={newOpt.contracts} onChange={e => setNewOpt({ ...newOpt, contracts: e.target.value })} />
@@ -1029,6 +1046,13 @@ export default function App() {
               <div className="field">
                 <label>Mark价格 (每股)</label>
                 <input type="number" placeholder="0" value={newOpt.markPrice} onChange={e => setNewOpt({ ...newOpt, markPrice: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>币种</label>
+                <select value={newOpt.currency} onChange={e => setNewOpt({ ...newOpt, currency: e.target.value as 'USD' | 'HKD' })}>
+                  <option value="USD">USD</option>
+                  <option value="HKD">HKD</option>
+                </select>
               </div>
             </div>
             <div className="actions">
