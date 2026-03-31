@@ -62,6 +62,16 @@ const EPOCH_DATE = '2026-03-06'
 const INITIAL_SHARES = 10000
 const INITIAL_NAV = 1.0
 
+/* ────────── 静态资产常量 (CNY) ────────── */
+const CASH_FIXED_INCOME = 48_000_000   // 现金固收 4800万
+const PHYSICAL_GOLD = 1_080_000         // 实物黄金 108万
+const OFFMARKET_STOCK_FUND = 3_200_000  // 场外股票基金 320万
+
+/* 股票型 ETF 代码（算入股票仓位） */
+const STOCK_TYPE_ETF_SYMBOLS = new Set(['510900.SH', '159941.SZ', '513050.SH'])
+/* 黄金 ETF 不计入股票仓位 */
+// 159934.SZ (黄金ETF易方达) excluded
+
 const defaultPositions: Position[] = [
   // A股 / 基金
   { id: 's1', symbol: '600036.SH', name: '招商银行', qty: 455400, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
@@ -422,7 +432,7 @@ export default function App() {
     [state.options, state.usdcny, state.hkdcny]
   )
 
-  // Pie data
+  // Pie data (individual stock positions + options)
   const pieData = useMemo(() => {
     const items: { name: string; value: number }[] = []
     for (const p of positionsEnriched) {
@@ -433,6 +443,58 @@ export default function App() {
     if (optTotal > 0) items.push({ name: '期权', value: optTotal })
     return items
   }, [positionsEnriched, optionsEnriched])
+
+  /* ────── 总资产概览计算 ────── */
+
+  // 个股市值（A股非ETF + 港股 + 美股）
+  const individualStockValue = useMemo(() => {
+    return positionsEnriched
+      .filter(p => !STOCK_TYPE_ETF_SYMBOLS.has(p.symbol) && p.symbol !== '159934.SZ')
+      .reduce((s, p) => s + p.valueCny, 0)
+  }, [positionsEnriched])
+
+  // 股票型 ETF 市值
+  const stockEtfValue = useMemo(() => {
+    return positionsEnriched
+      .filter(p => STOCK_TYPE_ETF_SYMBOLS.has(p.symbol))
+      .reduce((s, p) => s + p.valueCny, 0)
+  }, [positionsEnriched])
+
+  // 黄金ETF市值
+  const goldEtfValue = useMemo(() => {
+    return positionsEnriched
+      .filter(p => p.symbol === '159934.SZ')
+      .reduce((s, p) => s + p.valueCny, 0)
+  }, [positionsEnriched])
+
+  // 期权名义值
+  const optionAbsTotal = useMemo(() => {
+    return optionsEnriched.reduce((s, o) => s + Math.abs(o.signedCny), 0)
+  }, [optionsEnriched])
+
+  // 场内股票持仓 = 个股 + 股票型ETF
+  const inMarketStockValue = individualStockValue + stockEtfValue
+
+  // 股票仓位 = (场内股票持仓 + 场外股票基金) / 总资产
+  const stockExposureValue = inMarketStockValue + OFFMARKET_STOCK_FUND
+
+  // 总资产 = 场内所有持仓市值(含黄金ETF) + 期权名义值 + 现金固收 + 实物黄金 + 场外股票基金
+  const totalAssets = totalCny + CASH_FIXED_INCOME + PHYSICAL_GOLD + OFFMARKET_STOCK_FUND
+
+  const stockPositionRatio = totalAssets > 0 ? (stockExposureValue / totalAssets * 100) : 0
+
+  // 资产大类配置饼图
+  const assetAllocationData = useMemo(() => {
+    const items: { name: string; value: number }[] = []
+    if (individualStockValue > 0) items.push({ name: '股票', value: individualStockValue })
+    // 基金 = 股票型ETF + 黄金ETF + 场外股票基金
+    const fundTotal = stockEtfValue + goldEtfValue + OFFMARKET_STOCK_FUND
+    if (fundTotal > 0) items.push({ name: '基金', value: fundTotal })
+    if (optionAbsTotal > 0) items.push({ name: '期权', value: optionAbsTotal })
+    items.push({ name: '现金固收', value: CASH_FIXED_INCOME })
+    if (PHYSICAL_GOLD > 0) items.push({ name: '实物黄金', value: PHYSICAL_GOLD })
+    return items
+  }, [individualStockValue, stockEtfValue, goldEtfValue, optionAbsTotal])
 
   // Chart data
   const chartData = useMemo(() => {
@@ -616,7 +678,7 @@ export default function App() {
           </div>
         </div>
         <div className="card">
-          <div className="label">总资产 (CNY)</div>
+          <div className="label">场内持仓 (CNY)</div>
           <div className="value">¥{fmtInt(totalCny)}</div>
           <div className="sub">${fmtInt(totalCny / (state.usdcny || 7.25))}</div>
         </div>
@@ -655,6 +717,93 @@ export default function App() {
       {/* ===== OVERVIEW TAB ===== */}
       {tab === 'overview' && (
         <>
+          {/* 总资产概览 */}
+          <div className="section" style={{ marginTop: 16 }}>
+            <div className="section-header">
+              <h2>总资产概览</h2>
+            </div>
+            <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              <div className="card">
+                <div className="label">总资产 (含场外)</div>
+                <div className="value" style={{ fontSize: '1.3rem' }}>¥{fmtInt(totalAssets)}</div>
+                <div className="sub">${fmtInt(totalAssets / (state.usdcny || 7.25))}</div>
+              </div>
+              <div className="card">
+                <div className="label">股票仓位</div>
+                <div className="value" style={{ fontSize: '1.3rem' }}>{stockPositionRatio.toFixed(1)}%</div>
+                <div className="sub">¥{fmtInt(stockExposureValue)}</div>
+              </div>
+              <div className="card">
+                <div className="label">现金固收</div>
+                <div className="value" style={{ fontSize: '1.3rem' }}>¥{fmtInt(CASH_FIXED_INCOME)}</div>
+                <div className="sub">{totalAssets > 0 ? (CASH_FIXED_INCOME / totalAssets * 100).toFixed(1) : '0.0'}%</div>
+              </div>
+            </div>
+            <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginTop: 8 }}>
+              <div className="card">
+                <div className="label">场内持仓市值</div>
+                <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(totalCny)}</div>
+              </div>
+              <div className="card">
+                <div className="label">场外股票基金</div>
+                <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(OFFMARKET_STOCK_FUND)}</div>
+              </div>
+              <div className="card">
+                <div className="label">实物黄金</div>
+                <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(PHYSICAL_GOLD)}</div>
+              </div>
+              <div className="card">
+                <div className="label">期权名义值</div>
+                <div className="value" style={{ fontSize: '1rem' }}>¥{fmtInt(optionAbsTotal)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 资产大类配置饼图 */}
+          {assetAllocationData.length > 0 && (
+            <div className="pie-wrap" style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <div className="card">
+                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>资产大类配置</h2>
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie data={assetAllocationData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={105} innerRadius={55} paddingAngle={2}
+                      label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(1)}%`}
+                    >
+                      {assetAllocationData.map((_, i) => (
+                        <Cell key={i} fill={['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#d97706'][i % 5]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => `¥${fmtInt(v)}`} />
+                    <Legend formatter={(v: string) => <span style={{ fontSize: 12 }}>{v}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="card">
+                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>股票仓位说明</h2>
+                <div style={{ fontSize: '.82rem', lineHeight: 1.8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>个股市值</span><span>¥{fmtInt(individualStockValue)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>股票型ETF (510900/159941/513050)</span><span>¥{fmtInt(stockEtfValue)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>场外股票基金</span><span>¥{fmtInt(OFFMARKET_STOCK_FUND)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 6, fontWeight: 600 }}>
+                    <span>股票敞口合计</span><span>¥{fmtInt(stockExposureValue)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: 'var(--accent)' }}>
+                    <span>股票仓位占比</span><span>{stockPositionRatio.toFixed(1)}%</span>
+                  </div>
+                  <div style={{ marginTop: 12, color: 'var(--fg2)', fontSize: '.78rem' }}>
+                    注: 黄金ETF (159934) 不计入股票仓位
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* NAV Chart */}
           {state.navHistory.length > 1 && (
             <div className="chart-wrap">
