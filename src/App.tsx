@@ -1413,12 +1413,12 @@ export default function App() {
           <div className="section-header">
             <h2>AI 投资顾问</h2>
           </div>
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '10px 16px', fontSize: '.78rem', color: 'var(--fg2)', background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
-              基于你的投资哲学和当前持仓数据，AI将为你提供个性化投资建议。请配置 <code>VITE_ANTHROPIC_API_KEY</code> 环境变量。
+          <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 520 }}>
+            <div style={{ padding: '10px 16px', fontSize: '.78rem', color: 'var(--fg2)', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              基于你的投资哲学和当前持仓数据，AI将为你提供个性化投资建议。
             </div>
             {/* Chat messages area */}
-            <div style={{ height: 420, overflowY: 'auto', padding: 16 }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
               {chatMessages.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'var(--fg2)', fontSize: '.85rem', marginTop: 60 }}>
                   <div style={{ fontSize: '2rem', marginBottom: 12 }}>🤖</div>
@@ -1454,7 +1454,7 @@ export default function App() {
               <div ref={chatEndRef} />
             </div>
             {/* Chat input */}
-            <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg2)' }}>
+            <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', flexShrink: 0 }}>
               <input
                 style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--fg)', fontSize: '.85rem' }}
                 placeholder="输入你的投资问题..."
