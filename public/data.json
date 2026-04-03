@@ -169,8 +169,8 @@
       "qty": 457100,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 6.45,
-      "last_updated": "2026-03-27"
+      "last_price": 6.33,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 10,
@@ -179,8 +179,8 @@
       "qty": 32900,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 493.4,
-      "last_updated": "2026-03-27"
+      "last_price": 489.2,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 13,
@@ -189,8 +189,8 @@
       "qty": 9000,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 8.09,
-      "last_updated": "2026-03-27"
+      "last_price": 8.45,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 11,
@@ -199,8 +199,8 @@
       "qty": 29000,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 52.5,
-      "last_updated": "2026-03-27"
+      "last_price": 51,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 16,
@@ -209,8 +209,8 @@
       "qty": 10000,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 33,
-      "last_updated": "2026-03-27"
+      "last_price": 30.88,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 18,
@@ -219,8 +219,8 @@
       "qty": 3490,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 85.9,
-      "last_updated": "2026-03-27"
+      "last_price": 80.25,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 12,
@@ -229,8 +229,8 @@
       "qty": 18000,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 48.96,
-      "last_updated": "2026-03-27"
+      "last_price": 49.7,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 15,
@@ -239,8 +239,8 @@
       "qty": 9400,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 6.83,
-      "last_updated": "2026-03-27"
+      "last_price": 6.63,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 14,
@@ -249,8 +249,8 @@
       "qty": 9650,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 108.4,
-      "last_updated": "2026-03-27"
+      "last_price": 108.8,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 17,
@@ -259,8 +259,8 @@
       "qty": 15200,
       "currency": "HKD",
       "category": "equity",
-      "last_price": 122.6,
-      "last_updated": "2026-03-27"
+      "last_price": 118.5,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 1,
@@ -269,8 +269,8 @@
       "qty": 180421,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 9.922,
-      "last_updated": "2026-03-27"
+      "last_price": 10.259,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 6,
@@ -279,8 +279,8 @@
       "qty": 100000,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 1.276,
-      "last_updated": "2026-03-27"
+      "last_price": 1.284,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 7,
@@ -289,8 +289,8 @@
       "qty": 10000,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 19.21,
-      "last_updated": "2026-03-27"
+      "last_price": 18.48,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 8,
@@ -299,8 +299,8 @@
       "qty": 12900,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 416.18,
-      "last_updated": "2026-03-27"
+      "last_price": 386.46,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 5,
@@ -309,8 +309,8 @@
       "qty": 300000,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 1.062,
-      "last_updated": "2026-03-27"
+      "last_price": 1.049,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 4,
@@ -319,8 +319,8 @@
       "qty": 600000,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 1.211,
-      "last_updated": "2026-03-27"
+      "last_price": 1.164,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 2,
@@ -329,8 +329,8 @@
       "qty": 455400,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 39.44,
-      "last_updated": "2026-03-27"
+      "last_price": 39.4,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 9,
@@ -339,8 +339,8 @@
       "qty": 3000,
       "currency": "CNY",
       "category": "equity",
-      "last_price": 1416.02,
-      "last_updated": "2026-03-27"
+      "last_price": 1460,
+      "last_updated": "2026-04-03"
     },
     {
       "id": 21,
@@ -350,7 +350,7 @@
       "currency": "USD",
       "category": "equity",
       "last_price": 250,
-      "last_updated": "2026-03-27"
+      "last_updated": "2026-04-03"
     },
     {
       "id": 23,
@@ -360,7 +360,7 @@
       "currency": "USD",
       "category": "equity",
       "last_price": 150,
-      "last_updated": "2026-03-27"
+      "last_updated": "2026-04-03"
     },
     {
       "id": 22,
@@ -370,7 +370,7 @@
       "currency": "USD",
       "category": "equity",
       "last_price": 80,
-      "last_updated": "2026-03-27"
+      "last_updated": "2026-04-03"
     },
     {
       "id": 20,
@@ -380,7 +380,7 @@
       "currency": "USD",
       "category": "equity",
       "last_price": 800,
-      "last_updated": "2026-03-27"
+      "last_updated": "2026-04-03"
     },
     {
       "id": 19,
@@ -390,7 +390,7 @@
       "currency": "USD",
       "category": "equity",
       "last_price": 250,
-      "last_updated": "2026-03-27"
+      "last_updated": "2026-04-03"
     },
     {
       "id": 28,
@@ -456,11 +456,11 @@
   "options_positions": [],
   "config": {
     "epochDate": "2026-03-06",
-    "usdcny": "6.92",
+    "usdcny": "6.89",
     "initialShares": "10000"
   },
   "_meta": {
-    "exported_at": "2026-03-27T08:28:02.776Z",
+    "exported_at": "2026-04-03T12:40:04.940Z",
     "source": "portfoliolab.db",
     "tables": {
       "nav_history": 15,
