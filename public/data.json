@@ -460,7 +460,7 @@
     "initialShares": "10000"
   },
   "_meta": {
-    "exported_at": "2026-04-03T13:10:35.440Z",
+    "exported_at": "2026-04-03T13:29:16.401Z",
     "source": "portfoliolab.db",
     "tables": {
       "nav_history": 15,
