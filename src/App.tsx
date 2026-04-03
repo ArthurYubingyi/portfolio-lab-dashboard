@@ -561,21 +561,18 @@ export default function App() {
       .reduce((s, p) => s + p.valueCny, 0)
   }, [positionsEnriched])
 
+  // 黄金合并: 黄金ETF + 实物黄金 (#3)
+  const totalGoldValue = goldEtfValue + state.physicalGold
+
   // 期权名义值
   const optionAbsTotal = useMemo(() => {
     return optionsEnriched.reduce((s, o) => s + Math.abs(o.signedCny), 0)
   }, [optionsEnriched])
 
-  // 场内股票持仓 = 个股 + 股票型ETF
-  const inMarketStockValue = individualStockValue + stockEtfValue
+  // 权益仓位 = 场内股票持仓 + 场外股票基金 + 黄金(ETF+实物)
+  const equityExposureValue = individualStockValue + stockEtfValue + state.offmarketFund + totalGoldValue
 
-  // 股票仓位 = (场内股票持仓 + 场外股票基金) / 总资产
-  const stockExposureValue = inMarketStockValue + state.offmarketFund
-
-  const stockPositionRatio = totalAssets > 0 ? (stockExposureValue / totalAssets * 100) : 0
-
-  // 黄金合并: 黄金ETF + 实物黄金 (#3)
-  const totalGoldValue = goldEtfValue + state.physicalGold
+  const equityPositionRatio = totalAssets > 0 ? (equityExposureValue / totalAssets * 100) : 0
 
   // 资产大类配置饼图 (#3: 黄金合并)
   const assetAllocationData = useMemo(() => {
@@ -760,7 +757,7 @@ export default function App() {
     lines.push(`总资产(含场外): ¥${fmtInt(totalAssets)}`)
     lines.push(`场内持仓市值: ¥${fmtInt(totalCny)}`)
     lines.push(`现金固收: ¥${fmtInt(state.cashFixed)} (${totalAssets > 0 ? (state.cashFixed / totalAssets * 100).toFixed(1) : '0'}%)`)
-    lines.push(`股票仓位: ${stockPositionRatio.toFixed(1)}% (¥${fmtInt(stockExposureValue)})`)
+    lines.push(`权益仓位: ${equityPositionRatio.toFixed(1)}% (¥${fmtInt(equityExposureValue)})`)
     lines.push(`实物黄金: ¥${fmtInt(state.physicalGold)}`)
     lines.push(`场外股票基金: ¥${fmtInt(state.offmarketFund)}`)
     lines.push(`\n各持仓详情 (按市值排序):`)
@@ -773,7 +770,7 @@ export default function App() {
     }
     lines.push(`\n汇率: USD/CNY=${state.usdcny.toFixed(4)}, HKD/CNY=${state.hkdcny.toFixed(4)}`)
     return lines.join('\n')
-  }, [totalAssets, totalCny, stockPositionRatio, stockExposureValue, positionsEnriched, optionsEnriched, state.usdcny, state.hkdcny, state.cashFixed, state.physicalGold, state.offmarketFund])
+  }, [totalAssets, totalCny, equityPositionRatio, equityExposureValue, positionsEnriched, optionsEnriched, state.usdcny, state.hkdcny, state.cashFixed, state.physicalGold, state.offmarketFund])
 
   const handleSendChat = useCallback(async () => {
     const msg = chatInput.trim()
@@ -1033,9 +1030,9 @@ export default function App() {
                 <div className="sub">${fmtInt(totalAssets / (state.usdcny || 7.25))}</div>
               </div>
               <div className="card">
-                <div className="label">股票仓位</div>
-                <div className="value" style={{ fontSize: '1.3rem' }}>{stockPositionRatio.toFixed(1)}%</div>
-                <div className="sub">¥{fmtInt(stockExposureValue)}</div>
+                <div className="label">权益仓位</div>
+                <div className="value" style={{ fontSize: '1.3rem' }}>{equityPositionRatio.toFixed(1)}%</div>
+                <div className="sub">¥{fmtInt(equityExposureValue)}</div>
               </div>
               <div className="card">
                 <div className="label">现金固收</div>
@@ -1083,7 +1080,7 @@ export default function App() {
                 </ResponsiveContainer>
               </div>
               <div className="card">
-                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>股票仓位说明</h2>
+                <h2 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 12 }}>权益仓位说明</h2>
                 <div style={{ fontSize: '.82rem', lineHeight: 1.8 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>个股市值</span><span>¥{fmtInt(individualStockValue)}</span>
@@ -1094,11 +1091,14 @@ export default function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>场外股票基金</span><span>¥{fmtInt(state.offmarketFund)}</span>
                   </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>黄金(ETF+实物)</span><span>¥{fmtInt(totalGoldValue)}</span>
+                  </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 6, fontWeight: 600 }}>
-                    <span>股票敞口合计</span><span>¥{fmtInt(stockExposureValue)}</span>
+                    <span>权益敞口合计</span><span>¥{fmtInt(equityExposureValue)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: 'var(--accent)' }}>
-                    <span>股票仓位占比</span><span>{stockPositionRatio.toFixed(1)}%</span>
+                    <span>权益仓位占比</span><span>{equityPositionRatio.toFixed(1)}%</span>
                   </div>
                   <div style={{ marginTop: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fg2)' }}>
