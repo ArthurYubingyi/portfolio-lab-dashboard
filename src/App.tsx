@@ -66,9 +66,9 @@ interface ChatMessage {
 }
 
 /* ────────── defaults ────────── */
-const EPOCH_DATE = '2026-03-06'
+const EPOCH_DATE = '2026-02-13'
 const INITIAL_SHARES = 10000
-const INITIAL_NAV = 1.0
+const INITIAL_NAV = 11000.0
 
 /* ────────── 静态资产默认值 (CNY) ────────── */
 const DEFAULT_CASH_FIXED = 48_000_000   // 现金固收 4800万
