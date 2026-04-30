@@ -713,7 +713,8 @@ export default function App() {
   const handleCashFlow = () => {
     const amount = parseFloat(newCF.amount)
     if (isNaN(amount) || amount <= 0) { showToast('请输入有效金额'); return }
-    const currentNav = navPerShare > 0 ? navPerShare : INITIAL_NAV
+    if (navPerShare <= 0 || totalCny <= 0) { showToast('请先刷新行情，确认净值正常后再操作'); return }
+    const currentNav = navPerShare
     const sharesChanged = newCF.type === 'inflow'
       ? amount / currentNav
       : -(amount / currentNav)
@@ -735,6 +736,19 @@ export default function App() {
     setNewCF({ type: 'inflow', amount: '', note: '' })
     setShowCashFlow(false)
     showToast(newCF.type === 'inflow' ? '资金已流入，份额已增加' : '资金已流出，份额已减少')
+  }
+
+  const handleDeleteCashFlow = (cfId: string) => {
+    const cf = state.cashflows.find(c => c.id === cfId)
+    if (!cf) return
+    if (!confirm(`确认删除这笔${cf.type === 'inflow' ? '流入' : '流出'}记录？金额: ¥${fmtNum(cf.amount, 0)}，份额将回退。`)) return
+    update(s => ({
+      ...s,
+      totalShares: Math.max(0, s.totalShares - cf.sharesChanged),
+      cashFixed: Math.max(0, s.cashFixed - (cf.type === 'inflow' ? cf.amount : -cf.amount)),
+      cashflows: s.cashflows.filter(c => c.id !== cfId),
+    }))
+    showToast('记录已删除，份额已回退')
   }
 
   /* ────── export / import ────── */
@@ -1404,7 +1418,7 @@ export default function App() {
               <thead>
                 <tr>
                   <th>日期</th><th>类型</th><th className="r">金额(CNY)</th><th className="r">当时净值</th>
-                  <th className="r">份额变动</th><th>备注</th>
+                  <th className="r">份额变动</th><th>备注</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -1420,10 +1434,11 @@ export default function App() {
                       {cf.sharesChanged >= 0 ? '+' : ''}{fmtNum(cf.sharesChanged, 2)}
                     </td>
                     <td>{cf.note}</td>
+                    <td><button style={{ padding: '2px 8px', fontSize: '.75rem', color: 'var(--red)', background: 'none', border: '1px solid var(--red)', borderRadius: 4, cursor: 'pointer' }} onClick={() => handleDeleteCashFlow(cf.id)}>删除</button></td>
                   </tr>
                 ))}
                 {state.cashflows.length === 0 && (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--fg2)' }}>暂无资金流水记录</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--fg2)' }}>暂无资金流水记录</td></tr>
                 )}
               </tbody>
             </table>
