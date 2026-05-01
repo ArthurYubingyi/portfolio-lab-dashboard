@@ -1,0 +1,16 @@
+{
+  "symbol": "01024.HK",
+  "name": "快手-W",
+  "market": "HK",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 14.0, "pb": 2.5, "ps": 1.3, "dividendYield": 0.0, "peg": 0.8 },
+  "history5y": {
+    "pe": { "min": 8.0, "max": 60.0, "median": 22.0, "currentPercentile": 24.0 },
+    "pb": { "min": 1.5, "max": 8.0, "median": 3.5, "currentPercentile": 20.0 }
+  },
+  "history10y": {
+    "pe": { "min": 8.0, "max": 60.0, "median": 22.0, "currentPercentile": 24.0 },
+    "pb": { "min": 1.5, "max": 8.0, "median": 3.5, "currentPercentile": 20.0 }
+  },
+  "source": "seed"
+}

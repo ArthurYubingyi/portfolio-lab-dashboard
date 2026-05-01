@@ -1,0 +1,16 @@
+{
+  "symbol": "META",
+  "name": "Meta",
+  "market": "US",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 25.0, "pb": 6.5, "ps": 8.0, "dividendYield": 0.005, "peg": 1.4 },
+  "history5y": {
+    "pe": { "min": 11.0, "max": 35.0, "median": 22.0, "currentPercentile": 60.0 },
+    "pb": { "min": 3.5, "max": 8.5, "median": 5.5, "currentPercentile": 68.0 }
+  },
+  "history10y": {
+    "pe": { "min": 11.0, "max": 80.0, "median": 28.0, "currentPercentile": 38.0 },
+    "pb": { "min": 3.5, "max": 12.0, "median": 6.0, "currentPercentile": 55.0 }
+  },
+  "source": "seed"
+}

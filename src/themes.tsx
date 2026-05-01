@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
+import { DEFAULT_PRESET_QUESTIONS, GENERIC_PRESET_QUESTIONS, pickPerspective, type ChatPerspective } from './preset_questions'
 
 /* ────────── types ────────── */
 export interface VariableHistory {
@@ -51,6 +52,8 @@ export interface Theme {
   diary: DiaryEntry[]
   lastUpdated: string
   status: 'active' | 'paused' | 'closed'
+  /** P1: 预设问题列表，默认从 DEFAULT_PRESET_QUESTIONS 填充 */
+  presetQuestions?: string[]
 }
 
 const LS_THEMES = 'portfoliolab_themes'
@@ -94,6 +97,7 @@ function buildDefaultThemes(): Theme[] {
     diary: [],
     lastUpdated: t,
     status: 'active',
+    presetQuestions: DEFAULT_PRESET_QUESTIONS[name] || [...GENERIC_PRESET_QUESTIONS],
   })
 
   return [
@@ -246,7 +250,16 @@ function loadThemes(): Theme[] {
     const raw = localStorage.getItem(LS_THEMES)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // 向后兼容：为老主题补充 presetQuestions
+        const upgraded = parsed.map((t: Theme) => {
+          if (!t.presetQuestions || t.presetQuestions.length === 0) {
+            return { ...t, presetQuestions: DEFAULT_PRESET_QUESTIONS[t.name] || [...GENERIC_PRESET_QUESTIONS] }
+          }
+          return t
+        })
+        return upgraded
+      }
     }
   } catch (e) { console.warn('themes load failed', e) }
   const seed = buildDefaultThemes()
@@ -274,10 +287,14 @@ interface ThemesTabProps {
   setThemes: React.Dispatch<React.SetStateAction<Theme[]>>
   showToast: (msg: string) => void
   symbolNameMap: Record<string, string>
+  /** P1: 一键跳 AI 顾问 */
+  onAskAdvisor?: (question: string, perspective: ChatPerspective) => void
+  /** P0: 月报区域插槽 */
+  monthlyArea?: React.ReactNode
 }
 
 export function ThemesTab(props: ThemesTabProps) {
-  const { themes, setThemes, showToast, symbolNameMap } = props
+  const { themes, setThemes, showToast, symbolNameMap, onAskAdvisor, monthlyArea } = props
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showAddTheme, setShowAddTheme] = useState(false)
   const [newTheme, setNewTheme] = useState({ name: '', description: '' })
@@ -324,12 +341,14 @@ export function ThemesTab(props: ThemesTabProps) {
         onUpdate={(patch) => updateTheme(selected.id, patch)}
         showToast={showToast}
         symbolNameMap={symbolNameMap}
+        onAskAdvisor={onAskAdvisor}
       />
     )
   }
 
   return (
     <div>
+      {monthlyArea}
       <div className="section-header">
         <h2>产业主题列表（共 {themes.length} 个）</h2>
         <button className="primary" onClick={() => setShowAddTheme(true)}>+ 新增主题</button>
@@ -412,9 +431,10 @@ interface ThemeDetailProps {
   onUpdate: (patch: Partial<Theme>) => void
   showToast: (msg: string) => void
   symbolNameMap: Record<string, string>
+  onAskAdvisor?: (question: string, perspective: ChatPerspective) => void
 }
 
-function ThemeDetail({ theme, onBack, onUpdate, showToast, symbolNameMap }: ThemeDetailProps) {
+function ThemeDetail({ theme, onBack, onUpdate, showToast, symbolNameMap, onAskAdvisor }: ThemeDetailProps) {
   const [judgment, setJudgment] = useState(theme.currentJudgment)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<string | null>(null)
@@ -823,6 +843,14 @@ ${theme.counterEvidence.map(c => `- [严重度${c.severity}/${c.status}] ${c.des
         </div>
       )}
 
+      {/* 预设问题（P1） */}
+      <PresetQuestionsArea
+        theme={theme}
+        onUpdate={onUpdate}
+        onAskAdvisor={onAskAdvisor}
+        showToast={showToast}
+      />
+
       {/* 日记 */}
       <div className="card">
         <h3 style={{ fontSize: '.95rem', fontWeight: 600, marginBottom: 8 }}>主题日记（{theme.diary.length} 条）</h3>
@@ -1021,6 +1049,112 @@ function CounterModal(props: { initial: CounterEvidence | null; onClose: () => v
           <button className="primary" onClick={submit}>保存</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ────────── 预设问题区域（P1） ────────── */
+interface PresetQuestionsAreaProps {
+  theme: Theme
+  onUpdate: (patch: Partial<Theme>) => void
+  onAskAdvisor?: (question: string, perspective: ChatPerspective) => void
+  showToast: (msg: string) => void
+}
+
+function PresetQuestionsArea({ theme, onUpdate, onAskAdvisor, showToast }: PresetQuestionsAreaProps) {
+  const questions = theme.presetQuestions || []
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(questions.join('\n'))
+  const [newQ, setNewQ] = useState('')
+
+  const startEdit = () => {
+    setDraft((theme.presetQuestions || []).join('\n'))
+    setEditing(true)
+  }
+  const saveEdit = () => {
+    const list = draft.split('\n').map(s => s.trim()).filter(s => s.length > 0)
+    onUpdate({ presetQuestions: list })
+    setEditing(false)
+    showToast(`已保存 ${list.length} 个预设问题`)
+  }
+  const addOne = () => {
+    const v = newQ.trim()
+    if (!v) return
+    onUpdate({ presetQuestions: [...questions, v] })
+    setNewQ('')
+  }
+  const removeOne = (idx: number) => {
+    onUpdate({ presetQuestions: questions.filter((_, i) => i !== idx) })
+  }
+
+  const handleAsk = (q: string) => {
+    if (!onAskAdvisor) {
+      showToast('AI 顾问入口未挂载')
+      return
+    }
+    const persp = pickPerspective(q)
+    onAskAdvisor(q, persp)
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="section-header" style={{ marginBottom: 8 }}>
+        <h3 style={{ fontSize: '.95rem', fontWeight: 600 }}>📋 该问 AI 的问题（{questions.length}）</h3>
+        {!editing ? (
+          <button className="sm" onClick={startEdit}>批量编辑</button>
+        ) : (
+          <span>
+            <button className="sm" onClick={() => setEditing(false)}>取消</button>{' '}
+            <button className="sm primary" onClick={saveEdit}>保存</button>
+          </span>
+        )}
+      </div>
+
+      {editing ? (
+        <textarea
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          placeholder="一行一个问题"
+          style={{ width: '100%', minHeight: 240, padding: '8px 10px', fontSize: '.85rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', background: 'var(--bg)', color: 'var(--fg)', fontFamily: 'inherit', lineHeight: 1.6, resize: 'vertical' }}
+        />
+      ) : (
+        <>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {questions.length === 0 && (
+              <li style={{ fontSize: '.78rem', color: 'var(--fg2)' }}>（暂未预设问题）</li>
+            )}
+            {questions.map((q, i) => {
+              const persp = pickPerspective(q)
+              const perspLabel = ({ integrated: '综合', buffett: '巴菲特', wangyuquan: '王煜全', wangchuan: '王川' } as const)[persp]
+              return (
+                <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: '.85rem' }}>
+                  <span style={{ flex: 1, lineHeight: 1.5 }}>
+                    <span style={{ display: 'inline-block', width: 22, color: 'var(--fg2)', fontSize: '.75rem' }}>{i + 1}.</span>
+                    {q}
+                    <span className="badge" style={{ marginLeft: 6, background: 'var(--bg)', color: 'var(--fg2)', border: '1px solid var(--border)', fontSize: '.68rem' }}>
+                      {perspLabel}
+                    </span>
+                  </span>
+                  <span style={{ flexShrink: 0 }}>
+                    <button className="sm primary" onClick={() => handleAsk(q)}>问 AI</button>{' '}
+                    <button className="sm danger" onClick={() => removeOne(i)}>×</button>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+            <input
+              value={newQ}
+              onChange={e => setNewQ(e.target.value)}
+              placeholder="补充一个问题"
+              style={{ flex: 1 }}
+              onKeyDown={e => { if (e.key === 'Enter') addOne() }}
+            />
+            <button className="sm primary" onClick={addOne}>+</button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

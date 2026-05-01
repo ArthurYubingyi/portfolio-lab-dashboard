@@ -1,0 +1,16 @@
+{
+  "symbol": "000858.SZ",
+  "name": "五粮液",
+  "market": "A",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 14.5, "pb": 3.2, "ps": null, "dividendYield": 0.045, "peg": 1.1 },
+  "history5y": {
+    "pe": { "min": 12.0, "max": 50.0, "median": 26.0, "currentPercentile": 8.0 },
+    "pb": { "min": 2.8, "max": 12.5, "median": 6.5, "currentPercentile": 10.0 }
+  },
+  "history10y": {
+    "pe": { "min": 8.0, "max": 50.0, "median": 22.0, "currentPercentile": 14.0 },
+    "pb": { "min": 1.8, "max": 12.5, "median": 5.0, "currentPercentile": 18.0 }
+  },
+  "source": "seed"
+}

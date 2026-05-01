@@ -6,7 +6,13 @@ import {
 import { useThemes, ThemesTab } from './themes'
 import { useDecisions, DecisionForm, DecisionsTab, type Decision } from './decisions'
 import { SignalsTab } from './signals'
-
+import { useReviews, ReviewSection } from './reviews'
+import { useMonthlyReports, MonthlyReportSection } from './monthly_reports'
+import { EarningsBanner, EarningsManager, pickEarningsAlerts, type EarningsEntry } from './earnings'
+import { ValuationCell, ValuationDetailDialog, ValuationMonitorTab } from './valuation'
+import { BuyPlansTab, BuyPlanBanner, useBuyPlans, pickActiveAlerts } from './buy_plans'
+import { FearCheckTab } from './fear_check'
+import { DividendsTab } from './dividends'
 /* ────────── types ────────── */
 interface Position {
   id: string
@@ -17,6 +23,8 @@ interface Position {
   market: 'A' | 'HK' | 'US'
   lastPrice: number
   lastUpdated: string
+  targetBuyPrice?: number   // P2: 触发价（≤ 时提示买入）
+  targetSellPrice?: number  // P2: 触发价（≥ 时提示卖出）
 }
 
 interface OptionPosition {
@@ -61,6 +69,7 @@ interface AppState {
   cashFixed: number       // 现金固收 (CNY)
   physicalGold: number    // 实物黄金 (CNY)
   offmarketFund: number   // 场外股票基金 (CNY)
+  earningsCalendar?: EarningsEntry[]  // P1: 财报日历（手动录入）
 }
 
 interface ChatMessage {
@@ -278,6 +287,7 @@ function buildInitialState(): AppState {
     cashFixed: DEFAULT_CASH_FIXED,
     physicalGold: DEFAULT_PHYSICAL_GOLD,
     offmarketFund: DEFAULT_OFFMARKET_FUND,
+    earningsCalendar: [],
   }
 }
 
@@ -286,6 +296,7 @@ function migrateState(s: AppState): AppState {
   if (s.cashFixed === undefined) s.cashFixed = DEFAULT_CASH_FIXED
   if (s.physicalGold === undefined) s.physicalGold = DEFAULT_PHYSICAL_GOLD
   if (s.offmarketFund === undefined) s.offmarketFund = DEFAULT_OFFMARKET_FUND
+  if (!Array.isArray(s.earningsCalendar)) s.earningsCalendar = []
   return s
 }
 
@@ -481,11 +492,37 @@ export default function App() {
   })
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'themes' | 'decisions' | 'signals' | 'advisor'>('overview')
+  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'themes' | 'decisions' | 'signals' | 'advisor' | 'valuation' | 'fearcheck' | 'buyplans' | 'dividends'>('overview')
+  const [valuationDetailSymbol, setValuationDetailSymbol] = useState<string | null>(null)
 
-  /* ────── 产业洞察工作站：主题 + 决策 ────── */
+  /* ────── 产业洞察工作站：主题 + 决策 + 复盘 + 月报 ────── */
   const { themes, setThemes } = useThemes()
   const { decisions, setDecisions, addDecision, daysSinceLast } = useDecisions()
+  const { reviews, setReviews } = useReviews()
+  const { reports: monthlyReports, setReports: setMonthlyReports } = useMonthlyReports()
+
+  /* ────── 财报提醒 + 价格提醒（P1/P2） + 加仓计划触发（第三批） ────── */
+  const { plans: buyPlans } = useBuyPlans()
+  const earningsAlerts = useMemo(() => pickEarningsAlerts(state.earningsCalendar ?? []), [state.earningsCalendar])
+  const buyPlanAlerts = useMemo(() => {
+    const priceMap = new Map(state.positions.map(p => [p.symbol, p.lastPrice]))
+    return pickActiveAlerts(buyPlans, sym => priceMap.get(sym))
+  }, [buyPlans, state.positions])
+
+  /* ────── 组合再平衡（第三批·模块五） ────── */
+  // 实际计算在下方 totalAssets / equityPositionRatio 计算后才能进行，见后面 rebalanceSuggestions。
+  const priceAlerts = useMemo(() => {
+    const out: { id: string; symbol: string; name: string; lastPrice: number; target: number; kind: 'buy' | 'sell' }[] = []
+    for (const p of state.positions) {
+      if (p.targetBuyPrice && p.lastPrice > 0 && p.lastPrice <= p.targetBuyPrice) {
+        out.push({ id: p.id + ':buy', symbol: p.symbol, name: p.name, lastPrice: p.lastPrice, target: p.targetBuyPrice, kind: 'buy' })
+      }
+      if (p.targetSellPrice && p.lastPrice > 0 && p.lastPrice >= p.targetSellPrice) {
+        out.push({ id: p.id + ':sell', symbol: p.symbol, name: p.name, lastPrice: p.lastPrice, target: p.targetSellPrice, kind: 'sell' })
+      }
+    }
+    return out
+  }, [state.positions])
 
   // pending decision context: 决策表单确认后才真正执行的持仓变更
   const [pendingDecision, setPendingDecision] = useState<{
@@ -731,6 +768,27 @@ export default function App() {
 
   const equityPositionRatio = totalAssets > 0 ? (equityExposureValue / totalAssets * 100) : 0
 
+  /* ────── 再平衡提示（第三批·模块五） ────── */
+  const rebalanceSuggestions = useMemo(() => {
+    const out: { level: 'warn' | 'info'; text: string }[] = []
+    if (totalAssets <= 0) return out
+    if (equityPositionRatio > 75) {
+      out.push({ level: 'warn', text: `总权益仓位 ${equityPositionRatio.toFixed(1)}% > 75%，建议减仓 / 加仓现金资产` })
+    } else if (equityPositionRatio < 25) {
+      out.push({ level: 'info', text: `总权益仓位 ${equityPositionRatio.toFixed(1)}% < 25%，货币安全边际充足，可寻找估值<30%位的加仓机会` })
+    }
+    for (const p of positionsEnriched) {
+      const wRaw = p.weight
+      if (wRaw > 25) {
+        out.push({ level: 'warn', text: `${p.symbol} ${p.name} 占总资产 ${wRaw.toFixed(1)}% > 25%（巴菲特核心仓位上限），考虑减仓` })
+      }
+      if (wRaw > 0 && wRaw < 0.5) {
+        out.push({ level: 'info', text: `${p.symbol} ${p.name} 占总资产 ${wRaw.toFixed(2)}% < 0.5%（试探仓过小），要么加大到有意义仓位，要么清仓` })
+      }
+    }
+    return out
+  }, [totalAssets, equityPositionRatio, positionsEnriched])
+
   // 资产大类配置饼图 (#3: 黄金合并)
   const assetAllocationData = useMemo(() => {
     const items: { name: string; value: number }[] = []
@@ -754,7 +812,7 @@ export default function App() {
   }, [state.navHistory, chartRange])
 
   /* ────── add stock ────── */
-  const [newStock, setNewStock] = useState({ symbol: '', name: '', qty: '', currency: 'CNY' as 'CNY' | 'USD' | 'HKD', market: 'A' as 'A' | 'HK' | 'US', lastPrice: '' })
+  const [newStock, setNewStock] = useState({ symbol: '', name: '', qty: '', currency: 'CNY' as 'CNY' | 'USD' | 'HKD', market: 'A' as 'A' | 'HK' | 'US', lastPrice: '', targetBuyPrice: '', targetSellPrice: '' })
   const handleAddStock = () => {
     const qty = parseFloat(newStock.qty)
     const price = parseFloat(newStock.lastPrice)
@@ -764,6 +822,8 @@ export default function App() {
     const cur = newStock.currency
     const mkt = newStock.market
     const px = isNaN(price) ? 0 : price
+    const tBuy = parseFloat(newStock.targetBuyPrice)
+    const tSell = parseFloat(newStock.targetSellPrice)
     // 触发决策日志强制表单（新建仓）
     setShowAddStock(false)
     setPendingDecision({
@@ -776,9 +836,11 @@ export default function App() {
           positions: [...s.positions, {
             id: genId(), symbol: sym, name, qty, currency: cur, market: mkt,
             lastPrice: px, lastUpdated: today(),
+            ...(isNaN(tBuy) ? {} : { targetBuyPrice: tBuy }),
+            ...(isNaN(tSell) ? {} : { targetSellPrice: tSell }),
           }]
         }))
-        setNewStock({ symbol: '', name: '', qty: '', currency: 'CNY', market: 'A', lastPrice: '' })
+        setNewStock({ symbol: '', name: '', qty: '', currency: 'CNY', market: 'A', lastPrice: '', targetBuyPrice: '', targetSellPrice: '' })
         showToast('决策已记录，持仓已添加')
       }
     })
@@ -1081,7 +1143,7 @@ export default function App() {
     return (
       <>
         <tr>
-          <td colSpan={10} style={{ background: 'var(--bg2)', fontWeight: 600, fontSize: '.82rem', padding: '6px 12px', color: 'var(--fg2)' }}>
+          <td colSpan={11} style={{ background: 'var(--bg2)', fontWeight: 600, fontSize: '.82rem', padding: '6px 12px', color: 'var(--fg2)' }}>
             {label}
           </td>
         </tr>
@@ -1095,10 +1157,32 @@ export default function App() {
             <td className="r">{renderPrice(p)}</td>
             <td className="r">{renderValuation(p)}</td>
             <td className="r">{renderWeight(p)}</td>
+            <td>
+              <ValuationCell symbol={p.symbol} onClick={() => setValuationDetailSymbol(p.symbol)} />
+            </td>
             <td style={{ fontSize: '.75rem', color: 'var(--fg2)' }}>{p.lastUpdated || '--'}</td>
             <td>
               <div style={{ display: 'flex', gap: 4 }}>
                 <button className="sm" onClick={() => { setEditingPosition(p); setEditDeltaQty('') }}>调仓</button>
+                <button className="sm" onClick={() => {
+                  const cur = p.targetBuyPrice ? p.targetBuyPrice.toString() : ''
+                  const buyStr = window.prompt(`设置 ${p.symbol} 买入提醒价（现价 ≤ 该价提示买入，留空取消）：`, cur)
+                  if (buyStr === null) return
+                  const curS = p.targetSellPrice ? p.targetSellPrice.toString() : ''
+                  const sellStr = window.prompt(`设置 ${p.symbol} 卖出提醒价（现价 ≥ 该价提示卖出，留空取消）：`, curS)
+                  if (sellStr === null) return
+                  const tBuy = parseFloat(buyStr)
+                  const tSell = parseFloat(sellStr)
+                  update(s => ({
+                    ...s,
+                    positions: s.positions.map(x => x.id === p.id
+                      ? { ...x,
+                          targetBuyPrice: !isNaN(tBuy) && tBuy > 0 ? tBuy : undefined,
+                          targetSellPrice: !isNaN(tSell) && tSell > 0 ? tSell : undefined }
+                      : x),
+                  }))
+                  showToast('提醒价已更新')
+                }}>提醒价</button>
                 <button className="sm danger" onClick={() => handleDeletePosition(p.id)}>删除</button>
               </div>
             </td>
@@ -1214,7 +1298,7 @@ export default function App() {
 
       {/* Nav tabs */}
       <div style={{ display: 'flex', gap: 2, marginTop: 20, borderBottom: '2px solid var(--border)', paddingBottom: 0, flexWrap: 'wrap' }}>
-        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['themes', '主题'], ['decisions', '决策日志'], ['signals', '信号'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
+        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['valuation', '估值监控'], ['buyplans', '加仓计划'], ['themes', '主题'], ['decisions', '决策日志'], ['fearcheck', '恐高自检'], ['dividends', '股息'], ['signals', '信号'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -1233,6 +1317,68 @@ export default function App() {
       {/* ===== OVERVIEW TAB ===== */}
       {tab === 'overview' && (
         <>
+          {/* 加仓计划触发（第三批·模块二） */}
+          <BuyPlanBanner alerts={buyPlanAlerts} />
+
+          {/* 再平衡建议（第三批·模块五） */}
+          {rebalanceSuggestions.length > 0 && (
+            <div style={{
+              marginTop: 12, padding: 12, borderRadius: 8,
+              border: '1px solid var(--border)', background: 'var(--bg2)',
+            }}>
+              <div style={{ fontSize: '.8rem', color: 'var(--fg2)', marginBottom: 6 }}>⚖️ 再平衡建议</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {rebalanceSuggestions.map((s, i) => (
+                  <div key={i} style={{
+                    fontSize: '.85rem',
+                    color: s.level === 'warn' ? 'var(--red)' : 'var(--accent)',
+                  }}>
+                    {s.level === 'warn' ? '⚠️' : 'ℹ️'} {s.text}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 财报 + 价格提醒（P1/P2） */}
+          <EarningsBanner
+            alerts={earningsAlerts}
+            onAskAdvisor={(symbol, name) => {
+              setChatPerspective('integrated')
+              setChatInput(`${symbol}${name ? `（${name}）` : ''} 刚发布财报，请从综合总观角度帮我复盘：
+1. 本季财报核心亮点与担忧，并与上一季作横向对比；
+2. 管理层指引与街面预期差距；
+3. 该公司所属主题是否需要调整判断（请推导怎么在「主题追踪」里记录本次进展）。`)
+              setTab('advisor')
+              setTimeout(() => {
+                const el = document.querySelector<HTMLInputElement>('input[data-advisor-input]')
+                el?.focus()
+              }, 200)
+            }}
+          />
+          {priceAlerts.length > 0 && (
+            <div style={{
+              marginTop: 12, padding: 12, borderRadius: 8,
+              border: '1px solid var(--border)', background: 'var(--bg2)',
+            }}>
+              <div style={{ fontSize: '.8rem', color: 'var(--fg2)', marginBottom: 6 }}>🎯 价格提醒</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {priceAlerts.map(a => (
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.85rem' }}>
+                    <span style={{
+                      color: a.kind === 'buy' ? 'var(--green)' : 'var(--red)',
+                      fontWeight: 600, minWidth: 60,
+                    }}>{a.kind === 'buy' ? '买入' : '卖出'}</span>
+                    <span style={{ fontWeight: 500 }}>{a.symbol}</span>
+                    <span style={{ color: 'var(--fg2)' }}>{a.name}</span>
+                    <span style={{ color: 'var(--fg2)', fontSize: '.78rem' }}>
+                      现价 {a.lastPrice.toFixed(2)} {a.kind === 'buy' ? '≤' : '≥'} 触发价 {a.target.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {/* 总资产概览 */}
           <div className="section" style={{ marginTop: 16 }}>
             <div className="section-header">
@@ -1449,6 +1595,12 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {/* 财报提醒管理（P1） */}
+          <EarningsManager
+            earnings={state.earningsCalendar ?? []}
+            onUpdate={next => update(s => ({ ...s, earningsCalendar: next }))}
+          />
         </>
       )}
 
@@ -1465,7 +1617,7 @@ export default function App() {
                 <tr>
                   <th>代码</th><th>名称</th><th>市场</th><th>币种</th>
                   <th className="r">数量</th><th className="r">最新价</th><th className="r">估值(CNY)</th>
-                  <th className="r">占比</th><th>更新时间</th><th>操作</th>
+                  <th className="r">占比</th><th>PE分位</th><th>更新时间</th><th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -1631,6 +1783,26 @@ export default function App() {
             setThemes={setThemes}
             showToast={showToast}
             symbolNameMap={symbolNameMap}
+            onAskAdvisor={(question, perspective) => {
+              const persp = perspective as AdvisorPerspective
+              setChatPerspective(persp)
+              setChatInput(question)
+              setTab('advisor')
+              showToast(`已跳转 AI 顾问（${PERSPECTIVE_LABELS[persp]}）`)
+              setTimeout(() => {
+                const el = document.querySelector<HTMLInputElement>('input[data-advisor-input]')
+                el?.focus()
+              }, 200)
+            }}
+            monthlyArea={
+              <MonthlyReportSection
+                themes={themes}
+                reports={monthlyReports}
+                setReports={setMonthlyReports}
+                showToast={showToast}
+                autoCheck
+              />
+            }
           />
         </div>
       )}
@@ -1644,6 +1816,44 @@ export default function App() {
             themes={themes}
             showToast={showToast}
           />
+          <ReviewSection
+            decisions={decisions}
+            themes={themes}
+            reviews={reviews}
+            setReviews={setReviews}
+            showToast={showToast}
+          />
+        </div>
+      )}
+
+      {/* ===== VALUATION MONITOR TAB (第三批·模块一) ===== */}
+      {tab === 'valuation' && (
+        <div style={{ marginTop: 16 }}>
+          <ValuationMonitorTab heldSymbols={state.positions.map(p => p.symbol)} />
+        </div>
+      )}
+
+      {/* ===== BUY PLANS TAB (第三批·模块二) ===== */}
+      {tab === 'buyplans' && (
+        <div style={{ marginTop: 16 }}>
+          <BuyPlansTab
+            symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, lastPrice: p.lastPrice }))}
+            totalAssets={totalAssets}
+          />
+        </div>
+      )}
+
+      {/* ===== FEAR CHECK TAB (第三批·模块三) ===== */}
+      {tab === 'fearcheck' && (
+        <div style={{ marginTop: 16 }}>
+          <FearCheckTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name }))} />
+        </div>
+      )}
+
+      {/* ===== DIVIDENDS TAB (第三批·模块四) ===== */}
+      {tab === 'dividends' && (
+        <div style={{ marginTop: 16 }}>
+          <DividendsTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, currency: p.currency, quantity: p.qty }))} />
         </div>
       )}
 
@@ -1732,6 +1942,7 @@ export default function App() {
             {/* Chat input */}
             <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', flexShrink: 0 }}>
               <input
+                data-advisor-input=""
                 style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--fg)', fontSize: '.85rem' }}
                 placeholder="输入你的投资问题..."
                 value={chatInput}
@@ -1795,6 +2006,14 @@ export default function App() {
               <div className="field">
                 <label>当前价格</label>
                 <input type="number" placeholder="可选，刷新时自动获取" value={newStock.lastPrice} onChange={e => setNewStock({ ...newStock, lastPrice: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>买入提醒价</label>
+                <input type="number" placeholder="可选，现价≤该价提示买入" value={newStock.targetBuyPrice} onChange={e => setNewStock({ ...newStock, targetBuyPrice: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>卖出提醒价</label>
+                <input type="number" placeholder="可选，现价≥该价提示卖出" value={newStock.targetSellPrice} onChange={e => setNewStock({ ...newStock, targetSellPrice: e.target.value })} />
               </div>
             </div>
             <div className="actions">
@@ -1947,6 +2166,14 @@ export default function App() {
           setPendingDecision(null)
         }}
       />
+
+      {/* Valuation detail dialog (第三批·模块一) */}
+      {valuationDetailSymbol && (
+        <ValuationDetailDialog
+          symbol={valuationDetailSymbol}
+          onClose={() => setValuationDetailSymbol(null)}
+        />
+      )}
 
       {/* Toast */}
       {toast && <div className="toast">{toast}</div>}

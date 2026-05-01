@@ -1,0 +1,16 @@
+{
+  "symbol": "03690.HK",
+  "name": "美团-W",
+  "market": "HK",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 16.0, "pb": 2.8, "ps": 1.6, "dividendYield": 0.0, "peg": 1.0 },
+  "history5y": {
+    "pe": { "min": 12.0, "max": 80.0, "median": 28.0, "currentPercentile": 18.0 },
+    "pb": { "min": 2.0, "max": 12.0, "median": 5.5, "currentPercentile": 14.0 }
+  },
+  "history10y": {
+    "pe": { "min": 12.0, "max": 80.0, "median": 28.0, "currentPercentile": 18.0 },
+    "pb": { "min": 2.0, "max": 12.0, "median": 5.5, "currentPercentile": 14.0 }
+  },
+  "source": "seed"
+}

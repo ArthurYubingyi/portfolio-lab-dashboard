@@ -1,0 +1,16 @@
+{
+  "symbol": "GOOG",
+  "name": "Alphabet",
+  "market": "US",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 24.5, "pb": 6.2, "ps": 6.5, "dividendYield": 0.005, "peg": 1.5 },
+  "history5y": {
+    "pe": { "min": 18.0, "max": 32.0, "median": 24.0, "currentPercentile": 55.0 },
+    "pb": { "min": 4.5, "max": 7.5, "median": 6.0, "currentPercentile": 58.0 }
+  },
+  "history10y": {
+    "pe": { "min": 18.0, "max": 38.0, "median": 26.0, "currentPercentile": 38.0 },
+    "pb": { "min": 3.2, "max": 7.5, "median": 5.0, "currentPercentile": 65.0 }
+  },
+  "source": "seed"
+}

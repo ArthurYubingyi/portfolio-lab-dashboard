@@ -1,0 +1,33 @@
+{
+  "symbol": "600036.SH",
+  "lastUpdate": "2026-05-01",
+  "history": [
+    {
+      "exDividendDate": "2025-07-10",
+      "paymentDate": "2025-07-11",
+      "amount": 2.0,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2024-07-10",
+      "paymentDate": "2024-07-11",
+      "amount": 1.972,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2023-07-13",
+      "paymentDate": "2023-07-14",
+      "amount": 1.738,
+      "currency": "CNY"
+    }
+  ],
+  "upcoming": [
+    {
+      "exDividendDate": "2026-07-10",
+      "paymentDate": null,
+      "amount": null,
+      "estimated": true,
+      "currency": "CNY"
+    }
+  ]
+}

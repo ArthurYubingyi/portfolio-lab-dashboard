@@ -1,0 +1,16 @@
+{
+  "symbol": "09988.HK",
+  "name": "阿里巴巴-W",
+  "market": "HK",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 12.5, "pb": 1.6, "ps": 1.8, "dividendYield": 0.011, "peg": 1.4 },
+  "history5y": {
+    "pe": { "min": 8.5, "max": 28.0, "median": 15.0, "currentPercentile": 32.0 },
+    "pb": { "min": 1.2, "max": 5.5, "median": 2.4, "currentPercentile": 22.0 }
+  },
+  "history10y": {
+    "pe": { "min": 8.5, "max": 60.0, "median": 24.0, "currentPercentile": 14.0 },
+    "pb": { "min": 1.2, "max": 9.0, "median": 4.0, "currentPercentile": 12.0 }
+  },
+  "source": "seed"
+}

@@ -1,0 +1,16 @@
+{
+  "symbol": "300750.SZ",
+  "name": "宁德时代",
+  "market": "A",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 18.0, "pb": 3.1, "ps": null, "dividendYield": 0.018, "peg": 0.9 },
+  "history5y": {
+    "pe": { "min": 14.0, "max": 145.0, "median": 42.0, "currentPercentile": 9.0 },
+    "pb": { "min": 2.5, "max": 18.0, "median": 7.0, "currentPercentile": 12.0 }
+  },
+  "history10y": {
+    "pe": { "min": 14.0, "max": 145.0, "median": 42.0, "currentPercentile": 9.0 },
+    "pb": { "min": 2.5, "max": 18.0, "median": 7.0, "currentPercentile": 12.0 }
+  },
+  "source": "seed"
+}

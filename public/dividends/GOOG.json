@@ -1,0 +1,39 @@
+{
+  "symbol": "GOOG",
+  "lastUpdate": "2026-05-01",
+  "history": [
+    {
+      "exDividendDate": "2026-03-10",
+      "paymentDate": "2026-03-17",
+      "amount": 0.2,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2025-12-09",
+      "paymentDate": "2025-12-16",
+      "amount": 0.2,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2025-09-09",
+      "paymentDate": "2025-09-16",
+      "amount": 0.2,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2025-06-10",
+      "paymentDate": "2025-06-17",
+      "amount": 0.2,
+      "currency": "USD"
+    }
+  ],
+  "upcoming": [
+    {
+      "exDividendDate": "2026-06-09",
+      "paymentDate": "2026-06-16",
+      "amount": 0.2,
+      "estimated": true,
+      "currency": "USD"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "symbol": "AAPL",
+  "name": "Apple",
+  "market": "US",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 28.0, "pb": 42.0, "ps": 7.5, "dividendYield": 0.005, "peg": 2.5 },
+  "history5y": {
+    "pe": { "min": 18.0, "max": 38.0, "median": 27.0, "currentPercentile": 58.0 },
+    "pb": { "min": 22.0, "max": 55.0, "median": 38.0, "currentPercentile": 62.0 }
+  },
+  "history10y": {
+    "pe": { "min": 10.0, "max": 38.0, "median": 22.0, "currentPercentile": 78.0 },
+    "pb": { "min": 4.5, "max": 55.0, "median": 18.0, "currentPercentile": 88.0 }
+  },
+  "source": "seed"
+}

@@ -1,0 +1,16 @@
+{
+  "symbol": "AMZN",
+  "name": "Amazon",
+  "market": "US",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 38.0, "pb": 7.5, "ps": 3.4, "dividendYield": 0.0, "peg": 1.6 },
+  "history5y": {
+    "pe": { "min": 25.0, "max": 90.0, "median": 50.0, "currentPercentile": 32.0 },
+    "pb": { "min": 5.5, "max": 18.0, "median": 9.0, "currentPercentile": 28.0 }
+  },
+  "history10y": {
+    "pe": { "min": 25.0, "max": 320.0, "median": 80.0, "currentPercentile": 22.0 },
+    "pb": { "min": 5.5, "max": 35.0, "median": 14.0, "currentPercentile": 24.0 }
+  },
+  "source": "seed"
+}

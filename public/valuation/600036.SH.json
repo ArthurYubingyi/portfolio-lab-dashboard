@@ -1,0 +1,16 @@
+{
+  "symbol": "600036.SH",
+  "name": "招商银行",
+  "market": "A",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 6.2, "pb": 0.92, "ps": null, "dividendYield": 0.058, "peg": null },
+  "history5y": {
+    "pe": { "min": 4.5, "max": 12.5, "median": 7.5, "currentPercentile": 24.0 },
+    "pb": { "min": 0.78, "max": 2.05, "median": 1.25, "currentPercentile": 18.0 }
+  },
+  "history10y": {
+    "pe": { "min": 4.5, "max": 14.0, "median": 8.0, "currentPercentile": 22.0 },
+    "pb": { "min": 0.78, "max": 2.4, "median": 1.45, "currentPercentile": 14.0 }
+  },
+  "source": "seed"
+}

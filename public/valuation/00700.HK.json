@@ -1,0 +1,16 @@
+{
+  "symbol": "00700.HK",
+  "name": "腾讯控股",
+  "market": "HK",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 18.5, "pb": 3.4, "ps": 5.1, "dividendYield": 0.012, "peg": 1.1 },
+  "history5y": {
+    "pe": { "min": 11.5, "max": 38.5, "median": 22.0, "currentPercentile": 28.0 },
+    "pb": { "min": 2.6, "max": 6.8, "median": 4.5, "currentPercentile": 32.0 }
+  },
+  "history10y": {
+    "pe": { "min": 11.5, "max": 58.0, "median": 28.0, "currentPercentile": 22.0 },
+    "pb": { "min": 2.4, "max": 11.5, "median": 6.0, "currentPercentile": 18.0 }
+  },
+  "source": "seed"
+}

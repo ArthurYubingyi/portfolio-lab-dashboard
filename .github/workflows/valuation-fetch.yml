@@ -1,9 +1,9 @@
-name: Weekly Signal Fetch
+name: Weekly Valuation Fetch
 
 on:
   schedule:
-    # 每周一 UTC 02:00 运行（北京时间 10:00）
-    - cron: '0 2 * * *'
+    # 每周一 UTC 03:00 (北京时间 11:00)
+    - cron: '0 3 * * 1'
   workflow_dispatch: {}
 
 permissions:
@@ -17,18 +17,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Run signal fetch
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python scripts/fetch_signals.py
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install akshare yfinance pandas requests
+      - name: Run valuation fetch
+        run: python scripts/fetch_valuation.py
       - name: Commit & push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/signals/
+          git add public/valuation/
           if git diff --cached --quiet; then
-            echo "No new signals."
+            echo "No valuation changes."
           else
-            git commit -m "chore: weekly signal fetch $(date -u +%Y-%m-%d)"
+            git commit -m "chore: weekly valuation fetch $(date -u +%Y-%m-%d)"
             git push
           fi

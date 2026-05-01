@@ -1,0 +1,27 @@
+{
+  "symbol": "000858.SZ",
+  "lastUpdate": "2026-05-01",
+  "history": [
+    {
+      "exDividendDate": "2025-06-20",
+      "paymentDate": "2025-06-23",
+      "amount": 4.678,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2024-06-21",
+      "paymentDate": "2024-06-24",
+      "amount": 4.678,
+      "currency": "CNY"
+    }
+  ],
+  "upcoming": [
+    {
+      "exDividendDate": "2026-06-20",
+      "paymentDate": null,
+      "amount": null,
+      "estimated": true,
+      "currency": "CNY"
+    }
+  ]
+}

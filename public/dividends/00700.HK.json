@@ -1,0 +1,33 @@
+{
+  "symbol": "00700.HK",
+  "lastUpdate": "2026-05-01",
+  "history": [
+    {
+      "exDividendDate": "2025-05-15",
+      "paymentDate": "2025-06-04",
+      "amount": 4.5,
+      "currency": "HKD"
+    },
+    {
+      "exDividendDate": "2024-05-16",
+      "paymentDate": "2024-06-05",
+      "amount": 3.4,
+      "currency": "HKD"
+    },
+    {
+      "exDividendDate": "2023-05-18",
+      "paymentDate": "2023-06-09",
+      "amount": 2.4,
+      "currency": "HKD"
+    }
+  ],
+  "upcoming": [
+    {
+      "exDividendDate": "2026-05-15",
+      "paymentDate": null,
+      "amount": null,
+      "estimated": true,
+      "currency": "HKD"
+    }
+  ]
+}
