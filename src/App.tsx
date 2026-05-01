@@ -12,6 +12,7 @@ import { EarningsBanner, EarningsManager, pickEarningsAlerts, type EarningsEntry
 import { ValuationCell, ValuationDetailDialog, ValuationMonitorTab } from './valuation'
 import { BuyPlansTab, BuyPlanBanner, useBuyPlans, pickActiveAlerts } from './buy_plans'
 import { FearCheckTab } from './fear_check'
+import { DividendsTab } from './dividends'
 /* ────────── types ────────── */
 interface Position {
   id: string
@@ -491,7 +492,7 @@ export default function App() {
   })
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'themes' | 'decisions' | 'signals' | 'advisor' | 'valuation' | 'fearcheck' | 'buyplans'>('overview')
+  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'themes' | 'decisions' | 'signals' | 'advisor' | 'valuation' | 'fearcheck' | 'buyplans' | 'dividends'>('overview')
   const [valuationDetailSymbol, setValuationDetailSymbol] = useState<string | null>(null)
 
   /* ────── 产业洞察工作站：主题 + 决策 + 复盘 + 月报 ────── */
@@ -1297,7 +1298,7 @@ export default function App() {
 
       {/* Nav tabs */}
       <div style={{ display: 'flex', gap: 2, marginTop: 20, borderBottom: '2px solid var(--border)', paddingBottom: 0, flexWrap: 'wrap' }}>
-        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['valuation', '估值监控'], ['buyplans', '加仓计划'], ['themes', '主题'], ['decisions', '决策日志'], ['fearcheck', '恐高自检'], ['signals', '信号'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
+        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['valuation', '估值监控'], ['buyplans', '加仓计划'], ['themes', '主题'], ['decisions', '决策日志'], ['fearcheck', '恐高自检'], ['dividends', '股息'], ['signals', '信号'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -1846,6 +1847,13 @@ export default function App() {
       {tab === 'fearcheck' && (
         <div style={{ marginTop: 16 }}>
           <FearCheckTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name }))} />
+        </div>
+      )}
+
+      {/* ===== DIVIDENDS TAB (第三批·模块四) ===== */}
+      {tab === 'dividends' && (
+        <div style={{ marginTop: 16 }}>
+          <DividendsTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, currency: p.currency }))} />
         </div>
       )}
 
