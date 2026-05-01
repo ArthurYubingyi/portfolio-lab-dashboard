@@ -1,0 +1,16 @@
+{
+  "symbol": "MSFT",
+  "name": "Microsoft",
+  "market": "US",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 32.0, "pb": 11.5, "ps": 11.0, "dividendYield": 0.007, "peg": 2.2 },
+  "history5y": {
+    "pe": { "min": 24.0, "max": 38.0, "median": 30.0, "currentPercentile": 65.0 },
+    "pb": { "min": 9.0, "max": 14.5, "median": 11.5, "currentPercentile": 50.0 }
+  },
+  "history10y": {
+    "pe": { "min": 14.0, "max": 38.0, "median": 26.0, "currentPercentile": 78.0 },
+    "pb": { "min": 4.0, "max": 14.5, "median": 9.0, "currentPercentile": 80.0 }
+  },
+  "source": "seed"
+}

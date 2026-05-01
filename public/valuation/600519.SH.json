@@ -1,0 +1,16 @@
+{
+  "symbol": "600519.SH",
+  "name": "贵州茅台",
+  "market": "A",
+  "lastUpdate": "2026-05-01",
+  "current": { "pe": 22.5, "pb": 8.2, "ps": null, "dividendYield": 0.038, "peg": 1.5 },
+  "history5y": {
+    "pe": { "min": 18.0, "max": 65.0, "median": 36.0, "currentPercentile": 12.0 },
+    "pb": { "min": 7.5, "max": 18.5, "median": 12.5, "currentPercentile": 18.0 }
+  },
+  "history10y": {
+    "pe": { "min": 12.0, "max": 65.0, "median": 28.0, "currentPercentile": 24.0 },
+    "pb": { "min": 4.5, "max": 18.5, "median": 9.5, "currentPercentile": 32.0 }
+  },
+  "source": "seed"
+}

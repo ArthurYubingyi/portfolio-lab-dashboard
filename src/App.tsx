@@ -9,6 +9,9 @@ import { SignalsTab } from './signals'
 import { useReviews, ReviewSection } from './reviews'
 import { useMonthlyReports, MonthlyReportSection } from './monthly_reports'
 import { EarningsBanner, EarningsManager, pickEarningsAlerts, type EarningsEntry } from './earnings'
+import { ValuationCell, ValuationDetailDialog, ValuationMonitorTab } from './valuation'
+import { BuyPlansTab, BuyPlanBanner, useBuyPlans, pickActiveAlerts } from './buy_plans'
+import { FearCheckTab } from './fear_check'
 /* ────────── types ────────── */
 interface Position {
   id: string
@@ -488,7 +491,8 @@ export default function App() {
   })
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'themes' | 'decisions' | 'signals' | 'advisor'>('overview')
+  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'themes' | 'decisions' | 'signals' | 'advisor' | 'valuation' | 'fearcheck' | 'buyplans'>('overview')
+  const [valuationDetailSymbol, setValuationDetailSymbol] = useState<string | null>(null)
 
   /* ────── 产业洞察工作站：主题 + 决策 + 复盘 + 月报 ────── */
   const { themes, setThemes } = useThemes()
@@ -496,8 +500,16 @@ export default function App() {
   const { reviews, setReviews } = useReviews()
   const { reports: monthlyReports, setReports: setMonthlyReports } = useMonthlyReports()
 
-  /* ────── 财报提醒 + 价格提醒（P1/P2） ────── */
+  /* ────── 财报提醒 + 价格提醒（P1/P2） + 加仓计划触发（第三批） ────── */
+  const { plans: buyPlans } = useBuyPlans()
   const earningsAlerts = useMemo(() => pickEarningsAlerts(state.earningsCalendar ?? []), [state.earningsCalendar])
+  const buyPlanAlerts = useMemo(() => {
+    const priceMap = new Map(state.positions.map(p => [p.symbol, p.lastPrice]))
+    return pickActiveAlerts(buyPlans, sym => priceMap.get(sym))
+  }, [buyPlans, state.positions])
+
+  /* ────── 组合再平衡（第三批·模块五） ────── */
+  // 实际计算在下方 totalAssets / equityPositionRatio 计算后才能进行，见后面 rebalanceSuggestions。
   const priceAlerts = useMemo(() => {
     const out: { id: string; symbol: string; name: string; lastPrice: number; target: number; kind: 'buy' | 'sell' }[] = []
     for (const p of state.positions) {
@@ -754,6 +766,27 @@ export default function App() {
   const equityExposureValue = individualStockValue + stockEtfValue + state.offmarketFund + totalGoldValue
 
   const equityPositionRatio = totalAssets > 0 ? (equityExposureValue / totalAssets * 100) : 0
+
+  /* ────── 再平衡提示（第三批·模块五） ────── */
+  const rebalanceSuggestions = useMemo(() => {
+    const out: { level: 'warn' | 'info'; text: string }[] = []
+    if (totalAssets <= 0) return out
+    if (equityPositionRatio > 75) {
+      out.push({ level: 'warn', text: `总权益仓位 ${equityPositionRatio.toFixed(1)}% > 75%，建议减仓 / 加仓现金资产` })
+    } else if (equityPositionRatio < 25) {
+      out.push({ level: 'info', text: `总权益仓位 ${equityPositionRatio.toFixed(1)}% < 25%，货币安全边际充足，可寻找估值<30%位的加仓机会` })
+    }
+    for (const p of positionsEnriched) {
+      const wRaw = p.weight
+      if (wRaw > 25) {
+        out.push({ level: 'warn', text: `${p.symbol} ${p.name} 占总资产 ${wRaw.toFixed(1)}% > 25%（巴菲特核心仓位上限），考虑减仓` })
+      }
+      if (wRaw > 0 && wRaw < 0.5) {
+        out.push({ level: 'info', text: `${p.symbol} ${p.name} 占总资产 ${wRaw.toFixed(2)}% < 0.5%（试探仓过小），要么加大到有意义仓位，要么清仓` })
+      }
+    }
+    return out
+  }, [totalAssets, equityPositionRatio, positionsEnriched])
 
   // 资产大类配置饼图 (#3: 黄金合并)
   const assetAllocationData = useMemo(() => {
@@ -1109,7 +1142,7 @@ export default function App() {
     return (
       <>
         <tr>
-          <td colSpan={10} style={{ background: 'var(--bg2)', fontWeight: 600, fontSize: '.82rem', padding: '6px 12px', color: 'var(--fg2)' }}>
+          <td colSpan={11} style={{ background: 'var(--bg2)', fontWeight: 600, fontSize: '.82rem', padding: '6px 12px', color: 'var(--fg2)' }}>
             {label}
           </td>
         </tr>
@@ -1123,6 +1156,9 @@ export default function App() {
             <td className="r">{renderPrice(p)}</td>
             <td className="r">{renderValuation(p)}</td>
             <td className="r">{renderWeight(p)}</td>
+            <td>
+              <ValuationCell symbol={p.symbol} onClick={() => setValuationDetailSymbol(p.symbol)} />
+            </td>
             <td style={{ fontSize: '.75rem', color: 'var(--fg2)' }}>{p.lastUpdated || '--'}</td>
             <td>
               <div style={{ display: 'flex', gap: 4 }}>
@@ -1261,7 +1297,7 @@ export default function App() {
 
       {/* Nav tabs */}
       <div style={{ display: 'flex', gap: 2, marginTop: 20, borderBottom: '2px solid var(--border)', paddingBottom: 0, flexWrap: 'wrap' }}>
-        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['themes', '主题'], ['decisions', '决策日志'], ['signals', '信号'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
+        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['valuation', '估值监控'], ['buyplans', '加仓计划'], ['themes', '主题'], ['decisions', '决策日志'], ['fearcheck', '恐高自检'], ['signals', '信号'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -1280,6 +1316,29 @@ export default function App() {
       {/* ===== OVERVIEW TAB ===== */}
       {tab === 'overview' && (
         <>
+          {/* 加仓计划触发（第三批·模块二） */}
+          <BuyPlanBanner alerts={buyPlanAlerts} />
+
+          {/* 再平衡建议（第三批·模块五） */}
+          {rebalanceSuggestions.length > 0 && (
+            <div style={{
+              marginTop: 12, padding: 12, borderRadius: 8,
+              border: '1px solid var(--border)', background: 'var(--bg2)',
+            }}>
+              <div style={{ fontSize: '.8rem', color: 'var(--fg2)', marginBottom: 6 }}>⚖️ 再平衡建议</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {rebalanceSuggestions.map((s, i) => (
+                  <div key={i} style={{
+                    fontSize: '.85rem',
+                    color: s.level === 'warn' ? 'var(--red)' : 'var(--accent)',
+                  }}>
+                    {s.level === 'warn' ? '⚠️' : 'ℹ️'} {s.text}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 财报 + 价格提醒（P1/P2） */}
           <EarningsBanner
             alerts={earningsAlerts}
@@ -1557,7 +1616,7 @@ export default function App() {
                 <tr>
                   <th>代码</th><th>名称</th><th>市场</th><th>币种</th>
                   <th className="r">数量</th><th className="r">最新价</th><th className="r">估值(CNY)</th>
-                  <th className="r">占比</th><th>更新时间</th><th>操作</th>
+                  <th className="r">占比</th><th>PE分位</th><th>更新时间</th><th>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -1763,6 +1822,30 @@ export default function App() {
             setReviews={setReviews}
             showToast={showToast}
           />
+        </div>
+      )}
+
+      {/* ===== VALUATION MONITOR TAB (第三批·模块一) ===== */}
+      {tab === 'valuation' && (
+        <div style={{ marginTop: 16 }}>
+          <ValuationMonitorTab heldSymbols={state.positions.map(p => p.symbol)} />
+        </div>
+      )}
+
+      {/* ===== BUY PLANS TAB (第三批·模块二) ===== */}
+      {tab === 'buyplans' && (
+        <div style={{ marginTop: 16 }}>
+          <BuyPlansTab
+            symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, lastPrice: p.lastPrice }))}
+            totalAssets={totalAssets}
+          />
+        </div>
+      )}
+
+      {/* ===== FEAR CHECK TAB (第三批·模块三) ===== */}
+      {tab === 'fearcheck' && (
+        <div style={{ marginTop: 16 }}>
+          <FearCheckTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name }))} />
         </div>
       )}
 
@@ -2075,6 +2158,14 @@ export default function App() {
           setPendingDecision(null)
         }}
       />
+
+      {/* Valuation detail dialog (第三批·模块一) */}
+      {valuationDetailSymbol && (
+        <ValuationDetailDialog
+          symbol={valuationDetailSymbol}
+          onClose={() => setValuationDetailSymbol(null)}
+        />
+      )}
 
       {/* Toast */}
       {toast && <div className="toast">{toast}</div>}
