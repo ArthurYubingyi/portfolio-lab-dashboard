@@ -1,0 +1,90 @@
+{
+  "generatedAt": "2026-05-01T13:05:45+00:00",
+  "filter": "ai",
+  "signals": [
+    {
+      "source": "OpenAI Blog",
+      "title": "Building the compute infrastructure for the Intelligence Age",
+      "link": "https://openai.com/index/building-the-compute-infrastructure-for-the-intelligence-age",
+      "pubDate": "Wed, 29 Apr 2026 15:00:00 GMT",
+      "summary": "OpenAI scales Stargate to build the compute infrastructure powering AGI, adding new data center capacity to meet growing AI demand.",
+      "themes": [
+        "AI入口革命"
+      ],
+      "importance": 4,
+      "aiSummary": "OpenAI扩建Stargate计算基础设施，为AGI提供算力支撑，满足AI需求增长"
+    },
+    {
+      "source": "OpenAI Blog",
+      "title": "Cybersecurity in the Intelligence Age",
+      "link": "https://openai.com/index/cybersecurity-in-the-intelligence-age",
+      "pubDate": "Wed, 29 Apr 2026 04:00:00 GMT",
+      "summary": "OpenAI outlines a five-part action plan for strengthening cybersecurity in the Intelligence Age, focused on democratizing AI-powered cyber defense and protecting critical systems.",
+      "themes": [
+        "AI入口革命"
+      ],
+      "importance": 4,
+      "aiSummary": "OpenAI发布智能时代网络安全五步行动计划，重点推进AI驱动的网络防御民主化"
+    },
+    {
+      "source": "OpenAI Blog",
+      "title": "OpenAI models, Codex, and Managed Agents come to AWS",
+      "link": "https://openai.com/index/openai-on-aws",
+      "pubDate": "Tue, 28 Apr 2026 00:00:00 GMT",
+      "summary": "OpenAI GPT models, Codex, and Managed Agents are now available on AWS, enabling enterprises to build secure AI in their AWS environments.",
+      "themes": [
+        "AI入口革命"
+      ],
+      "importance": 4,
+      "aiSummary": "OpenAI模型和代理服务登陆AWS，为企业提供云端安全AI构建能力，拓展AI应用入口"
+    },
+    {
+      "source": "OpenAI Blog",
+      "title": "The next phase of the Microsoft OpenAI partnership",
+      "link": "https://openai.com/index/next-phase-of-microsoft-partnership",
+      "pubDate": "Mon, 27 Apr 2026 06:00:00 GMT",
+      "summary": "OpenAI and Microsoft announce an amended agreement that simplifies the partnership, adds long-term clarity, and supports continued AI innovation at scale.",
+      "themes": [
+        "AI入口革命"
+      ],
+      "importance": 4,
+      "aiSummary": "微软与OpenAI修订合作协议，简化合作关系并增加长期确定性，支持大规模AI创新发展"
+    },
+    {
+      "source": "OpenAI Blog",
+      "title": "Our principles",
+      "link": "https://openai.com/index/our-principles",
+      "pubDate": "Sun, 26 Apr 2026 16:00:00 GMT",
+      "summary": "Our mission is to ensure that AGI benefits all of humanity. Sam Altman shares five principles that guide our work.",
+      "themes": [
+        "AI入口革命"
+      ],
+      "importance": 4,
+      "aiSummary": "OpenAI CEO阿尔特曼分享五大原则指导AGI发展，确保通用人工智能造福全人类"
+    },
+    {
+      "source": "OpenAI Blog",
+      "title": "GPT-5.5 System Card",
+      "link": "https://openai.com/index/gpt-5-5-system-card",
+      "pubDate": "Thu, 23 Apr 2026 11:00:00 GMT",
+      "summary": "",
+      "themes": [
+        "AI入口革命"
+      ],
+      "importance": 4,
+      "aiSummary": "GPT-5.5系统卡片发布，标志着大模型技术迭代升级，将影响AI应用入口格局"
+    },
+    {
+      "source": "OpenAI Blog",
+      "title": "Introducing GPT-5.5",
+      "link": "https://openai.com/index/introducing-gpt-5-5",
+      "pubDate": "Thu, 23 Apr 2026 11:00:00 GMT",
+      "summary": "Introducing GPT-5.5, our smartest model yet—faster, more capable, and built for complex tasks like coding, research, and data analysis across tools.",
+      "themes": [
+        "AI入口革命"
+      ],
+      "importance": 5,
+      "aiSummary": "OpenAI发布GPT-5.5，性能大幅提升，专攻编程研究数据分析等复杂任务"
+    }
+  ]
+}
