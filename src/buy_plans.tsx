@@ -248,7 +248,7 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
       note: draft.note || undefined,
     }
     setPlans([plan, ...plans])
-    setDraft({ symbol: '', name: '', currentPrice: '', targetHigh: '', targetLow: '', maxCapital: '', winRate: '5', note: '' })
+    setDraft({ symbol: '', name: '', currentPrice: '', targetHigh: '', targetLow: '', maxCapital: '', winRate: '5', oddsB: '2', note: '' })
   }
 
   const remove = (id: string) => {
