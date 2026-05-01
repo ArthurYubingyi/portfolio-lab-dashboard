@@ -6,7 +6,9 @@ import {
 import { useThemes, ThemesTab } from './themes'
 import { useDecisions, DecisionForm, DecisionsTab, type Decision } from './decisions'
 import { SignalsTab } from './signals'
-
+import { useReviews, ReviewSection } from './reviews'
+import { useMonthlyReports, MonthlyReportSection } from './monthly_reports'
+import { EarningsBanner, EarningsManager, pickEarningsAlerts, type EarningsEntry } from './earnings'
 /* ────────── types ────────── */
 interface Position {
   id: string
@@ -17,6 +19,8 @@ interface Position {
   market: 'A' | 'HK' | 'US'
   lastPrice: number
   lastUpdated: string
+  targetBuyPrice?: number   // P2: 触发价（≤ 时提示买入）
+  targetSellPrice?: number  // P2: 触发价（≥ 时提示卖出）
 }
 
 interface OptionPosition {
@@ -61,6 +65,7 @@ interface AppState {
   cashFixed: number       // 现金固收 (CNY)
   physicalGold: number    // 实物黄金 (CNY)
   offmarketFund: number   // 场外股票基金 (CNY)
+  earningsCalendar?: EarningsEntry[]  // P1: 财报日历（手动录入）
 }
 
 interface ChatMessage {
@@ -278,6 +283,7 @@ function buildInitialState(): AppState {
     cashFixed: DEFAULT_CASH_FIXED,
     physicalGold: DEFAULT_PHYSICAL_GOLD,
     offmarketFund: DEFAULT_OFFMARKET_FUND,
+    earningsCalendar: [],
   }
 }
 
@@ -286,6 +292,7 @@ function migrateState(s: AppState): AppState {
   if (s.cashFixed === undefined) s.cashFixed = DEFAULT_CASH_FIXED
   if (s.physicalGold === undefined) s.physicalGold = DEFAULT_PHYSICAL_GOLD
   if (s.offmarketFund === undefined) s.offmarketFund = DEFAULT_OFFMARKET_FUND
+  if (!Array.isArray(s.earningsCalendar)) s.earningsCalendar = []
   return s
 }
 
@@ -483,9 +490,26 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null)
   const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'themes' | 'decisions' | 'signals' | 'advisor'>('overview')
 
-  /* ────── 产业洞察工作站：主题 + 决策 ────── */
+  /* ────── 产业洞察工作站：主题 + 决策 + 复盘 + 月报 ────── */
   const { themes, setThemes } = useThemes()
   const { decisions, setDecisions, addDecision, daysSinceLast } = useDecisions()
+  const { reviews, setReviews } = useReviews()
+  const { reports: monthlyReports, setReports: setMonthlyReports } = useMonthlyReports()
+
+  /* ────── 财报提醒 + 价格提醒（P1/P2） ────── */
+  const earningsAlerts = useMemo(() => pickEarningsAlerts(state.earningsCalendar ?? []), [state.earningsCalendar])
+  const priceAlerts = useMemo(() => {
+    const out: { id: string; symbol: string; name: string; lastPrice: number; target: number; kind: 'buy' | 'sell' }[] = []
+    for (const p of state.positions) {
+      if (p.targetBuyPrice && p.lastPrice > 0 && p.lastPrice <= p.targetBuyPrice) {
+        out.push({ id: p.id + ':buy', symbol: p.symbol, name: p.name, lastPrice: p.lastPrice, target: p.targetBuyPrice, kind: 'buy' })
+      }
+      if (p.targetSellPrice && p.lastPrice > 0 && p.lastPrice >= p.targetSellPrice) {
+        out.push({ id: p.id + ':sell', symbol: p.symbol, name: p.name, lastPrice: p.lastPrice, target: p.targetSellPrice, kind: 'sell' })
+      }
+    }
+    return out
+  }, [state.positions])
 
   // pending decision context: 决策表单确认后才真正执行的持仓变更
   const [pendingDecision, setPendingDecision] = useState<{
@@ -754,7 +778,7 @@ export default function App() {
   }, [state.navHistory, chartRange])
 
   /* ────── add stock ────── */
-  const [newStock, setNewStock] = useState({ symbol: '', name: '', qty: '', currency: 'CNY' as 'CNY' | 'USD' | 'HKD', market: 'A' as 'A' | 'HK' | 'US', lastPrice: '' })
+  const [newStock, setNewStock] = useState({ symbol: '', name: '', qty: '', currency: 'CNY' as 'CNY' | 'USD' | 'HKD', market: 'A' as 'A' | 'HK' | 'US', lastPrice: '', targetBuyPrice: '', targetSellPrice: '' })
   const handleAddStock = () => {
     const qty = parseFloat(newStock.qty)
     const price = parseFloat(newStock.lastPrice)
@@ -764,6 +788,8 @@ export default function App() {
     const cur = newStock.currency
     const mkt = newStock.market
     const px = isNaN(price) ? 0 : price
+    const tBuy = parseFloat(newStock.targetBuyPrice)
+    const tSell = parseFloat(newStock.targetSellPrice)
     // 触发决策日志强制表单（新建仓）
     setShowAddStock(false)
     setPendingDecision({
@@ -776,9 +802,11 @@ export default function App() {
           positions: [...s.positions, {
             id: genId(), symbol: sym, name, qty, currency: cur, market: mkt,
             lastPrice: px, lastUpdated: today(),
+            ...(isNaN(tBuy) ? {} : { targetBuyPrice: tBuy }),
+            ...(isNaN(tSell) ? {} : { targetSellPrice: tSell }),
           }]
         }))
-        setNewStock({ symbol: '', name: '', qty: '', currency: 'CNY', market: 'A', lastPrice: '' })
+        setNewStock({ symbol: '', name: '', qty: '', currency: 'CNY', market: 'A', lastPrice: '', targetBuyPrice: '', targetSellPrice: '' })
         showToast('决策已记录，持仓已添加')
       }
     })
@@ -1099,6 +1127,25 @@ export default function App() {
             <td>
               <div style={{ display: 'flex', gap: 4 }}>
                 <button className="sm" onClick={() => { setEditingPosition(p); setEditDeltaQty('') }}>调仓</button>
+                <button className="sm" onClick={() => {
+                  const cur = p.targetBuyPrice ? p.targetBuyPrice.toString() : ''
+                  const buyStr = window.prompt(`设置 ${p.symbol} 买入提醒价（现价 ≤ 该价提示买入，留空取消）：`, cur)
+                  if (buyStr === null) return
+                  const curS = p.targetSellPrice ? p.targetSellPrice.toString() : ''
+                  const sellStr = window.prompt(`设置 ${p.symbol} 卖出提醒价（现价 ≥ 该价提示卖出，留空取消）：`, curS)
+                  if (sellStr === null) return
+                  const tBuy = parseFloat(buyStr)
+                  const tSell = parseFloat(sellStr)
+                  update(s => ({
+                    ...s,
+                    positions: s.positions.map(x => x.id === p.id
+                      ? { ...x,
+                          targetBuyPrice: !isNaN(tBuy) && tBuy > 0 ? tBuy : undefined,
+                          targetSellPrice: !isNaN(tSell) && tSell > 0 ? tSell : undefined }
+                      : x),
+                  }))
+                  showToast('提醒价已更新')
+                }}>提醒价</button>
                 <button className="sm danger" onClick={() => handleDeletePosition(p.id)}>删除</button>
               </div>
             </td>
@@ -1233,6 +1280,45 @@ export default function App() {
       {/* ===== OVERVIEW TAB ===== */}
       {tab === 'overview' && (
         <>
+          {/* 财报 + 价格提醒（P1/P2） */}
+          <EarningsBanner
+            alerts={earningsAlerts}
+            onAskAdvisor={(symbol, name) => {
+              setChatPerspective('integrated')
+              setChatInput(`${symbol}${name ? `（${name}）` : ''} 刚发布财报，请从综合总观角度帮我复盘：
+1. 本季财报核心亮点与担忧，并与上一季作横向对比；
+2. 管理层指引与街面预期差距；
+3. 该公司所属主题是否需要调整判断（请推导怎么在「主题追踪」里记录本次进展）。`)
+              setTab('advisor')
+              setTimeout(() => {
+                const el = document.querySelector<HTMLInputElement>('input[data-advisor-input]')
+                el?.focus()
+              }, 200)
+            }}
+          />
+          {priceAlerts.length > 0 && (
+            <div style={{
+              marginTop: 12, padding: 12, borderRadius: 8,
+              border: '1px solid var(--border)', background: 'var(--bg2)',
+            }}>
+              <div style={{ fontSize: '.8rem', color: 'var(--fg2)', marginBottom: 6 }}>🎯 价格提醒</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {priceAlerts.map(a => (
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.85rem' }}>
+                    <span style={{
+                      color: a.kind === 'buy' ? 'var(--green)' : 'var(--red)',
+                      fontWeight: 600, minWidth: 60,
+                    }}>{a.kind === 'buy' ? '买入' : '卖出'}</span>
+                    <span style={{ fontWeight: 500 }}>{a.symbol}</span>
+                    <span style={{ color: 'var(--fg2)' }}>{a.name}</span>
+                    <span style={{ color: 'var(--fg2)', fontSize: '.78rem' }}>
+                      现价 {a.lastPrice.toFixed(2)} {a.kind === 'buy' ? '≤' : '≥'} 触发价 {a.target.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {/* 总资产概览 */}
           <div className="section" style={{ marginTop: 16 }}>
             <div className="section-header">
@@ -1449,6 +1535,12 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {/* 财报提醒管理（P1） */}
+          <EarningsManager
+            earnings={state.earningsCalendar ?? []}
+            onUpdate={next => update(s => ({ ...s, earningsCalendar: next }))}
+          />
         </>
       )}
 
@@ -1631,6 +1723,26 @@ export default function App() {
             setThemes={setThemes}
             showToast={showToast}
             symbolNameMap={symbolNameMap}
+            onAskAdvisor={(question, perspective) => {
+              const persp = perspective as AdvisorPerspective
+              setChatPerspective(persp)
+              setChatInput(question)
+              setTab('advisor')
+              showToast(`已跳转 AI 顾问（${PERSPECTIVE_LABELS[persp]}）`)
+              setTimeout(() => {
+                const el = document.querySelector<HTMLInputElement>('input[data-advisor-input]')
+                el?.focus()
+              }, 200)
+            }}
+            monthlyArea={
+              <MonthlyReportSection
+                themes={themes}
+                reports={monthlyReports}
+                setReports={setMonthlyReports}
+                showToast={showToast}
+                autoCheck
+              />
+            }
           />
         </div>
       )}
@@ -1642,6 +1754,13 @@ export default function App() {
             decisions={decisions}
             setDecisions={setDecisions}
             themes={themes}
+            showToast={showToast}
+          />
+          <ReviewSection
+            decisions={decisions}
+            themes={themes}
+            reviews={reviews}
+            setReviews={setReviews}
             showToast={showToast}
           />
         </div>
@@ -1732,6 +1851,7 @@ export default function App() {
             {/* Chat input */}
             <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg2)', flexShrink: 0 }}>
               <input
+                data-advisor-input=""
                 style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--fg)', fontSize: '.85rem' }}
                 placeholder="输入你的投资问题..."
                 value={chatInput}
@@ -1795,6 +1915,14 @@ export default function App() {
               <div className="field">
                 <label>当前价格</label>
                 <input type="number" placeholder="可选，刷新时自动获取" value={newStock.lastPrice} onChange={e => setNewStock({ ...newStock, lastPrice: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>买入提醒价</label>
+                <input type="number" placeholder="可选，现价≤该价提示买入" value={newStock.targetBuyPrice} onChange={e => setNewStock({ ...newStock, targetBuyPrice: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>卖出提醒价</label>
+                <input type="number" placeholder="可选，现价≥该价提示卖出" value={newStock.targetSellPrice} onChange={e => setNewStock({ ...newStock, targetSellPrice: e.target.value })} />
               </div>
             </div>
             <div className="actions">
