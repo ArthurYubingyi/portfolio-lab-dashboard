@@ -1,0 +1,39 @@
+{
+  "symbol": "AAPL",
+  "lastUpdate": "2026-05-01",
+  "history": [
+    {
+      "exDividendDate": "2026-02-09",
+      "paymentDate": "2026-02-13",
+      "amount": 0.26,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2025-11-10",
+      "paymentDate": "2025-11-13",
+      "amount": 0.26,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2025-08-11",
+      "paymentDate": "2025-08-14",
+      "amount": 0.26,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2025-05-12",
+      "paymentDate": "2025-05-15",
+      "amount": 0.25,
+      "currency": "USD"
+    }
+  ],
+  "upcoming": [
+    {
+      "exDividendDate": "2026-05-11",
+      "paymentDate": "2026-05-14",
+      "amount": 0.26,
+      "estimated": true,
+      "currency": "USD"
+    }
+  ]
+}

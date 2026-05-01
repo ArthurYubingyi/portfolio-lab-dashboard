@@ -1853,7 +1853,7 @@ export default function App() {
       {/* ===== DIVIDENDS TAB (第三批·模块四) ===== */}
       {tab === 'dividends' && (
         <div style={{ marginTop: 16 }}>
-          <DividendsTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, currency: p.currency }))} />
+          <DividendsTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, currency: p.currency, quantity: p.qty }))} />
         </div>
       )}
 

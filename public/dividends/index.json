@@ -1,0 +1,95 @@
+{
+  "updatedAt": "2026-05-01",
+  "list": [
+    {
+      "symbol": "600519.SH",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 3,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "600036.SH",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 3,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "300750.SZ",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 2,
+      "upcomingCount": 0
+    },
+    {
+      "symbol": "000858.SZ",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 2,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "00700.HK",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 3,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "09988.HK",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 2,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "01024.HK",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 0,
+      "upcomingCount": 0
+    },
+    {
+      "symbol": "03690.HK",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 0,
+      "upcomingCount": 0
+    },
+    {
+      "symbol": "AAPL",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 4,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "MSFT",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 4,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "GOOG",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 4,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "META",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 4,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "NVDA",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 2,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "AMZN",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 0,
+      "upcomingCount": 0
+    },
+    {
+      "symbol": "TSLA",
+      "lastUpdate": "2026-05-01",
+      "historyCount": 0,
+      "upcomingCount": 0
+    }
+  ]
+}
