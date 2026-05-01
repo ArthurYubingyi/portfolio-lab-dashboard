@@ -1837,7 +1837,7 @@ export default function App() {
       {tab === 'buyplans' && (
         <div style={{ marginTop: 16 }}>
           <BuyPlansTab
-            symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, lastPrice: p.lastPrice }))}
+            symbolHints={positionsEnriched.map(p => ({ symbol: p.symbol, name: p.name, lastPrice: p.lastPrice, valueCny: p.valueCny }))}
             totalAssets={totalAssets}
           />
         </div>
