@@ -608,7 +608,21 @@ export default function App() {
   )
 
   const latestNav = state.navHistory.length > 0 ? state.navHistory[state.navHistory.length - 1] : null
-  const prevNav = state.navHistory.length > 1 ? state.navHistory[state.navHistory.length - 2] : null
+  // Find the most recent valid prev nav: must be from a different date AND within reasonable range (avoid bogus 1.0 entries)
+  const prevNav = (() => {
+    if (state.navHistory.length < 2 || !latestNav) return null
+    const currentNav = latestNav.nav
+    // Walk backwards to find a sane prior data point (not the same date, not orders-of-magnitude off)
+    for (let i = state.navHistory.length - 2; i >= 0; i--) {
+      const candidate = state.navHistory[i]
+      if (candidate.date === latestNav.date) continue
+      // Treat as bogus if ratio differs by more than 5x (real daily moves never exceed this)
+      const ratio = currentNav / candidate.nav
+      if (ratio > 5 || ratio < 0.2) continue
+      return candidate
+    }
+    return null
+  })()
   const displayNav = latestNav?.nav ?? navPerShare
   const dayChange = prevNav ? ((displayNav - prevNav.nav) / prevNav.nav * 100) : 0
   const sinceInception = ((displayNav / INITIAL_NAV) - 1) * 100
@@ -886,6 +900,16 @@ export default function App() {
     const fresh = buildInitialState()
     setState(fresh)
     showToast('已重置为默认数据')
+  }
+
+  const handleCleanNavHistory = () => {
+    if (!confirm('清理净值历史记录中的异常数据？仅删除明显错误的记录（净值<10或与当前差距过大），不影响持仓和资金流。')) return
+    update(s => {
+      // Keep only sane nav history entries (filter out bogus 1.0 entries)
+      const cleaned = s.navHistory.filter(h => h.nav >= 10 && h.nav <= 1_000_000)
+      return { ...s, navHistory: cleaned }
+    })
+    showToast('已清理异常净值历史')
   }
 
   /* ────── AI Chat (#2) ────── */
@@ -1647,6 +1671,7 @@ export default function App() {
           <button className="sm" onClick={handleExport}>导出数据</button>
           <button className="sm" onClick={handleImport}>导入数据</button>
           <button className="sm danger" onClick={handleReset}>重置数据</button>
+          <button className="sm" onClick={handleCleanNavHistory} style={{ marginLeft: 8 }}>清理异常净值历史</button>
         </p>
       </div>
 
