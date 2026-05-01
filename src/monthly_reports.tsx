@@ -248,7 +248,7 @@ export function MonthlyReportSection({ themes, reports, setReports, showToast, a
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="sm" onClick={(e) => { e.stopPropagation(); handleCopy(r) }}>复制</button>
                 <button className="sm" onClick={(e) => { e.stopPropagation(); handleExport(r) }}>导出 MD</button>
-                <button className="sm" onClick={(e) => { e.stopPropagation() }}>{isOpen ? '收起' : '展开'}</button>
+                <button className="sm" onClick={(e) => { e.stopPropagation(); setExpanded(isOpen ? null : r.id) }}>{isOpen ? '收起' : '展开'}</button>
                 <button className="sm danger" onClick={(e) => { e.stopPropagation(); handleDelete(r.id) }}>×</button>
               </div>
             </div>

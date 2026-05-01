@@ -27,11 +27,11 @@ export interface BuyPlan {
   name?: string
   createdAt: string
   currentPrice: number
-  targetHigh: number  // \u533a\u95f4\u4e0a\u9650\uff08\u9996\u4ed3\u4ef7\uff09
-  targetLow: number   // \u533a\u95f4\u4e0b\u9650\uff08\u6700\u4f4e\u4ef7\uff09
+  targetHigh: number  // 区间上限（首仓价）
+  targetLow: number   // 区间下限（最低价）
   maxCapital: number
   winRate: number     // 1-9
-  kellyFraction: number  // \u8ba1\u7b97\u540e\u7684 f*
+  kellyFraction: number  // 计算后的 f*
   totalAssets: number
   pyramid: PyramidLevel[]
   status: 'active' | 'completed' | 'cancelled'
@@ -40,36 +40,36 @@ export interface BuyPlan {
 
 function genId() { return Math.random().toString(36).slice(2, 10) }
 
-/* ────────── \u51ef\u5229\u516c\u5f0f ────────── */
+/* ────────── 凯利公式 ────────── */
 
 /**
- * \u80dc\u7387 1-9 \u6620\u5c04\u4e3a 0.55..0.85
+ * 胜率 1-9 映射为 0.55..0.85
  */
 function winRateToProb(score: number): number {
   const s = Math.max(1, Math.min(9, score))
-  return 0.50 + (s - 1) * (0.35 / 8)  // 1\u219250%, 9\u219285%
+  return 0.50 + (s - 1) * (0.35 / 8)  // 1→50%, 9→85%
 }
 
 /**
- * \u8d54\u7387 b\uff1a\u8df3\u4ed3\u4f30\u503c\u8d54\u7387\u3002\u63a8\u5bfc\u4e3a\u7ed9\u5b9a\u4ef7\u533a\u95f4\u7684\u9690\u542b\u4e0a\u884c\u7a7a\u95f4\u3002
- *  \u7b80\u5316\uff1ab = \u5e73\u5747\u4e70\u5165\u4ef7 \u4e0a\u53cd\u5f39 50% (\u7406\u8bba 1y \u76ee\u6807) \u3247 \u4e0b\u8dcc\u5e45\u5ea6 \u224820% \u4e0b\u9650
+ * 赔率 b：跳仓估值赔率。推导为给定价区间的隐含上行空间。
+ *  简化：b = 平均买入价 上反弹 50% (理论 1y 目标) ㉇ 下跌幅度 ≈20% 下限
  */
 export function computeKelly(winScore: number): { p: number; q: number; b: number; f: number } {
   const p = winRateToProb(winScore)
   const q = 1 - p
-  const b = 2.5  // \u9690\u542b\u8d54\u7387 = 2.5\uff08\u80dc\u8d3a 2.5 \u5355\u4f4d / \u8d25\u8d54 1 \u5355\u4f4d\uff0c\u5bf9\u5e94\u9006\u52bf\u5206\u6279\u573a\u666f\uff09
+  const b = 2.5  // 隐含赔率 = 2.5（胜贺 2.5 单位 / 败赔 1 单位，对应逆势分批场景）
   let f = (b * p - q) / b
   if (!isFinite(f) || f < 0) f = 0
-  // \u5b89\u5168\u4e0a\u9650 25%
+  // 安全上限 25%
   f = Math.min(f, 0.25)
   return { p, q, b, f: Math.round(f * 1000) / 1000 }
 }
 
-/* ────────── \u91d1\u5b57\u5854\u751f\u6210 ────────── */
+/* ────────── 金字塔生成 ────────── */
 
 /**
- * 4 \u6863\u8df3\u4ef7\uff1a\u4ece targetHigh \u7b49\u95f4\u8ddd\u5230 targetLow\uff0c\u4f4e\u4ef7\u5206\u914d\u66f4\u591a\u8d44\u91d1\u3002
- * \u9ed8\u8ba4\u4e3b\u91cd\u5206\u5e03 [0.15, 0.25, 0.30, 0.30]\u3002
+ * 4 档跳价：从 targetHigh 等间距到 targetLow，低价分配更多资金。
+ * 默认主重分布 [0.15, 0.25, 0.30, 0.30]。
  */
 export function buildPyramid(
   currentPrice: number,
@@ -79,7 +79,7 @@ export function buildPyramid(
 ): PyramidLevel[] {
   if (targetHigh <= 0 || targetLow <= 0 || targetLow >= targetHigh || maxCapital <= 0) return []
   const weights = [0.15, 0.25, 0.30, 0.30]
-  // 4 \u6863\u4ef7\u4f4d\uff1ahigh, high*0.95, mid, low (\u51e0\u4f55\u5e73\u5747\u8df3)
+  // 4 档价位：high, high*0.95, mid, low (几何平均跳)
   const ratio = (targetLow / targetHigh) ** (1 / 3)
   const prices = [
     targetHigh,
@@ -107,7 +107,7 @@ export function buildPyramid(
   return levels
 }
 
-/* ────────── \u5b58\u50a8 hook ────────── */
+/* ────────── 存储 hook ────────── */
 
 export function useBuyPlans() {
   const [plans, setPlans] = useState<BuyPlan[]>(() => {
@@ -125,7 +125,7 @@ export function useBuyPlans() {
 }
 
 /**
- * \u67e5\u770b\u54ea\u4e9b\u8ba1\u5212\u88ab\u300c\u5b9e\u65f6\u4ef7\u300d\u89e6\u53d1\uff0c\u8fd4\u56de banner \u9700\u8981\u7684\u63d0\u793a\u3002
+ * 查看哪些计划被「实时价」触发，返回 banner 需要的提示。
  */
 export interface BuyPlanAlert {
   planId: string
@@ -146,7 +146,7 @@ export function pickActiveAlerts(
     if (plan.status !== 'active') continue
     const cur = livePrice(plan.symbol)
     if (cur == null || cur <= 0) continue
-    // \u627e\u51fa\u5f53\u524d\u4ef7 \u2264 \u67d0\u6863\uff0c\u4e14\u5c1a\u672a\u88ab\u6807\u8bb0 triggered \u7684\u6700\u9ad8\u4ef7\u4f4d
+    // 找出当前价 ≤ 某档，且尚未被标记 triggered 的最高价位
     for (let i = 0; i < plan.pyramid.length; i++) {
       const lvl = plan.pyramid[i]
       if (cur <= lvl.price) {
@@ -166,7 +166,7 @@ export function pickActiveAlerts(
   return out
 }
 
-/* ────────── BuyPlansTab \u2014 \u8ba1\u5212\u5668 + \u6d3b\u8dc3\u8ba1\u5212\u5217\u8868 ────────── */
+/* ────────── BuyPlansTab — 计划器 + 活跃计划列表 ────────── */
 
 interface BuyPlansTabProps {
   symbolHints: { symbol: string; name: string; lastPrice: number }[]
@@ -186,7 +186,7 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
     note: '',
   })
 
-  // \u5f53\u9009\u4e2d\u6301\u4ed3\u80a1\u65f6\u81ea\u52a8\u586b\u5145\u73b0\u4ef7\u4e0e\u540d\u79f0
+  // 当选中持仓股时自动填充现价与名称
   const onPickSymbol = (sym: string) => {
     const hint = symbolHints.find(x => x.symbol === sym)
     setDraft({
@@ -239,7 +239,7 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
   }
 
   const remove = (id: string) => {
-    if (!confirm('\u5220\u9664\u8be5\u52a0\u4ed3\u8ba1\u5212\uff1f')) return
+    if (!confirm('删除该加仓计划？')) return
     setPlans(plans.filter(p => p.id !== id))
   }
 
@@ -249,10 +249,10 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
 
   return (
     <>
-      {/* \u52a0\u4ed3\u8ba1\u5212\u5668 */}
+      {/* 加仓计划器 */}
       <div className="section">
         <div className="section-header">
-          <h2>\u52a0\u4ed3\u8ba1\u5212\u5668</h2>
+          <h2>加仓计划器</h2>
         </div>
 
         <div style={{
@@ -260,87 +260,87 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
           background: 'var(--bg2)', border: '1px solid var(--border)',
           fontSize: '.78rem', color: 'var(--fg2)', marginBottom: 12,
         }}>
-          \u3010Arthur \u54f2\u5b66\u3011\u9006\u52bf\u5206\u6279\u52a0\u4ed3 + \u51ef\u5229\u516c\u5f0f\u3002\u4f4e\u4ef7\u4f4d\u4e0b\u91cd\u591a\u4ed3\uff0c\u5355\u6807\u7684\u4e0a\u9650 25%\u3002
-          \u80dc\u7387\u8d8a\u9ad8 / \u8d54\u7387\u8d8a\u5927\uff0c\u51ef\u5229\u63a8\u8350\u4ed3\u4f4d\u8d8a\u91cd\u3002
+          【Arthur 哲学】逆势分批加仓 + 凯利公式。低价位下重多仓，单标的上限 25%。
+          胜率越高 / 赔率越大，凯利推荐仓位越重。
         </div>
 
-        {/* \u8f93\u5165\u533a */}
+        {/* 输入区 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
           <div className="field">
-            <label>\u80a1\u7968\u4ee3\u7801</label>
+            <label>股票代码</label>
             <div style={{ display: 'flex', gap: 6 }}>
-              <input value={draft.symbol} onChange={e => setDraft({ ...draft, symbol: e.target.value })} placeholder="\u5982 00700.HK" />
+              <input value={draft.symbol} onChange={e => setDraft({ ...draft, symbol: e.target.value })} placeholder="如 00700.HK" />
               {symbolHints.length > 0 && (
                 <select onChange={e => onPickSymbol(e.target.value)} value="" style={{ width: 110 }}>
-                  <option value="">\u9009\u6301\u4ed3</option>
+                  <option value="">选持仓</option>
                   {symbolHints.map(h => <option key={h.symbol} value={h.symbol}>{h.symbol}</option>)}
                 </select>
               )}
             </div>
           </div>
           <div className="field">
-            <label>\u540d\u79f0\uff08\u53ef\u9009\uff09</label>
-            <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="\u817e\u8baf\u63a7\u80a1" />
+            <label>名称（可选）</label>
+            <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="腾讯控股" />
           </div>
           <div className="field">
-            <label>\u5f53\u524d\u4ef7</label>
+            <label>当前价</label>
             <input type="number" value={draft.currentPrice} onChange={e => setDraft({ ...draft, currentPrice: e.target.value })} />
           </div>
           <div className="field">
-            <label>\u76ee\u6807\u4e70\u5165\u4ef7\u4e0a\u9650 (\u9996\u4ed3\u4ef7)</label>
-            <input type="number" value={draft.targetHigh} onChange={e => setDraft({ ...draft, targetHigh: e.target.value })} placeholder="\u5982 450" />
+            <label>目标买入价上限 (首仓价)</label>
+            <input type="number" value={draft.targetHigh} onChange={e => setDraft({ ...draft, targetHigh: e.target.value })} placeholder="如 450" />
           </div>
           <div className="field">
-            <label>\u76ee\u6807\u4e70\u5165\u4ef7\u4e0b\u9650 (\u6700\u4f4e\u52a0\u4ef7)</label>
-            <input type="number" value={draft.targetLow} onChange={e => setDraft({ ...draft, targetLow: e.target.value })} placeholder="\u5982 400" />
+            <label>目标买入价下限 (最低加价)</label>
+            <input type="number" value={draft.targetLow} onChange={e => setDraft({ ...draft, targetLow: e.target.value })} placeholder="如 400" />
           </div>
           <div className="field">
-            <label>\u6700\u5927\u6295\u5165\u8d44\u91d1</label>
-            <input type="number" value={draft.maxCapital} onChange={e => setDraft({ ...draft, maxCapital: e.target.value })} placeholder="\u5982 2000000" />
+            <label>最大投入资金</label>
+            <input type="number" value={draft.maxCapital} onChange={e => setDraft({ ...draft, maxCapital: e.target.value })} placeholder="如 2000000" />
           </div>
           <div className="field">
-            <label>\u80dc\u7387\u5224\u65ad (1=\u5f88\u5dee, 9=\u9ad8\u80dc\u7387)</label>
+            <label>胜率判断 (1=很差, 9=高胜率)</label>
             <input type="number" min={1} max={9} value={draft.winRate} onChange={e => setDraft({ ...draft, winRate: e.target.value })} />
             <div style={{ fontSize: '.7rem', color: 'var(--fg2)', marginTop: 2 }}>
-              \u5f53\u524d\u80dc\u7387 {Math.round(kelly.p * 100)}% \u00b7 \u51ef\u5229 f*={kelly.f} \u00b7 \u63a8\u8350\u603b\u4ed3\u4f4d
-              {recommendedTotalCapital ? ` \u00a5${recommendedTotalCapital.toLocaleString()}` : ' (\u8bf7\u586b\u603b\u8d44\u4ea7)'}
+              当前胜率 {Math.round(kelly.p * 100)}% · 凯利 f*={kelly.f} · 推荐总仓位
+              {recommendedTotalCapital ? ` ¥${recommendedTotalCapital.toLocaleString()}` : ' (请填总资产)'}
             </div>
           </div>
           <div className="field" style={{ gridColumn: 'span 2' }}>
-            <label>\u5907\u6ce8\uff08\u53ef\u9009\uff09</label>
-            <input value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })} placeholder="\u4e3a\u4ec0\u4e48\u8981\u4e70\uff1f\u7406\u7531\u4e00\u53e5\u8bdd" />
+            <label>备注（可选）</label>
+            <input value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })} placeholder="为什么要买？理由一句话" />
           </div>
         </div>
 
-        {/* \u91d1\u5b57\u5854\u8868 */}
+        {/* 金字塔表 */}
         {pyramid.length > 0 && (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>\u4ef7\u4f4d\u6863</th>
-                  <th className="r">\u4ef7\u683c</th>
-                  <th className="r">\u8ddd\u73b0\u4ef7\u8dcc\u5e45</th>
-                  <th className="r">\u5355\u6863\u91d1\u989d</th>
-                  <th className="r">\u7d2f\u8ba1\u91d1\u989d</th>
-                  <th className="r">\u7d2f\u8ba1\u4ed3\u4f4d</th>
-                  <th>\u72b6\u6001</th>
+                  <th>价位档</th>
+                  <th className="r">价格</th>
+                  <th className="r">距现价跌幅</th>
+                  <th className="r">单档金额</th>
+                  <th className="r">累计金额</th>
+                  <th className="r">累计仓位</th>
+                  <th>状态</th>
                 </tr>
               </thead>
               <tbody>
                 {pyramid.map((lvl, i) => (
                   <tr key={i}>
-                    <td>\u7b2c {i + 1} \u6863</td>
+                    <td>第 {i + 1} 档</td>
                     <td className="r">{lvl.price.toFixed(2)}</td>
                     <td className="r" style={{ color: lvl.drawdownPct < 0 ? 'var(--red)' : 'var(--fg2)' }}>
                       {lvl.drawdownPct > 0 ? '+' : ''}{lvl.drawdownPct.toFixed(1)}%
                     </td>
-                    <td className="r">\u00a5{lvl.amount.toLocaleString()}</td>
-                    <td className="r">\u00a5{lvl.cumAmount.toLocaleString()}</td>
+                    <td className="r">¥{lvl.amount.toLocaleString()}</td>
+                    <td className="r">¥{lvl.cumAmount.toLocaleString()}</td>
                     <td className="r">{lvl.cumPct.toFixed(1)}%</td>
                     <td>{lvl.triggered
-                      ? <span style={{ color: 'var(--green)' }}>\u2713 \u5df2\u89e6\u53d1</span>
-                      : <span style={{ color: 'var(--fg2)' }}>\u7b49\u5f85</span>}</td>
+                      ? <span style={{ color: 'var(--green)' }}>✓ 已触发</span>
+                      : <span style={{ color: 'var(--fg2)' }}>等待</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -349,20 +349,20 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
         )}
 
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-          <button className="primary" onClick={save} disabled={!canSave}>\u4fdd\u5b58\u4e3a\u52a0\u4ed3\u8ba1\u5212</button>
+          <button className="primary" onClick={save} disabled={!canSave}>保存为加仓计划</button>
           {!canSave && <span style={{ color: 'var(--fg2)', fontSize: '.78rem', alignSelf: 'center' }}>
-            \u8bf7\u5b8c\u6574\u586b\u5199\u4ee3\u7801 / \u4ef7\u533a\u95f4 / \u8d44\u91d1
+            请完整填写代码 / 价区间 / 资金
           </span>}
         </div>
       </div>
 
-      {/* \u6d3b\u8dc3\u8ba1\u5212\u5217\u8868 */}
+      {/* 活跃计划列表 */}
       <div className="section" style={{ marginTop: 16 }}>
         <div className="section-header">
-          <h2>\u5df2\u4fdd\u5b58\u52a0\u4ed3\u8ba1\u5212</h2>
+          <h2>已保存加仓计划</h2>
         </div>
         {plans.length === 0 ? (
-          <div style={{ color: 'var(--fg2)', fontSize: '.85rem' }}>\u8fd8\u6ca1\u6709\u4fdd\u5b58\u4efb\u4f55\u8ba1\u5212</div>
+          <div style={{ color: 'var(--fg2)', fontSize: '.85rem' }}>还没有保存任何计划</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {plans.map(p => (
@@ -378,17 +378,17 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
                     background: p.status === 'active' ? 'var(--green)' : 'var(--bg)',
                     color: p.status === 'active' ? '#fff' : 'var(--fg2)',
                   }}>
-                    {p.status === 'active' ? '\u8fdb\u884c\u4e2d' : p.status === 'completed' ? '\u5df2\u5b8c\u6210' : '\u5df2\u53d6\u6d88'}
+                    {p.status === 'active' ? '进行中' : p.status === 'completed' ? '已完成' : '已取消'}
                   </span>
                   <span style={{ marginLeft: 'auto', fontSize: '.72rem', color: 'var(--fg2)' }}>
                     {new Date(p.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 16, fontSize: '.78rem', color: 'var(--fg2)', flexWrap: 'wrap' }}>
-                  <span>\u521b\u5efa\u4ef7 {p.currentPrice}</span>
-                  <span>\u533a\u95f4 {p.targetLow}\u2013{p.targetHigh}</span>
-                  <span>\u603b\u8d44\u91d1 \u00a5{p.maxCapital.toLocaleString()}</span>
-                  <span>\u80dc\u7387 {p.winRate}/9 \u00b7 f*={p.kellyFraction}</span>
+                  <span>创建价 {p.currentPrice}</span>
+                  <span>区间 {p.targetLow}–{p.targetHigh}</span>
+                  <span>总资金 ¥{p.maxCapital.toLocaleString()}</span>
+                  <span>胜率 {p.winRate}/9 · f*={p.kellyFraction}</span>
                 </div>
                 {p.note && <div style={{ fontSize: '.78rem', color: 'var(--fg2)', marginTop: 4 }}>{p.note}</div>}
                 <div style={{ marginTop: 8, fontSize: '.75rem' }}>
@@ -397,21 +397,21 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
                       marginRight: 12,
                       color: lvl.triggered ? 'var(--green)' : 'var(--fg2)',
                     }}>
-                      {lvl.triggered ? '\u25cf' : '\u25cb'} \u6863{i + 1} {lvl.price.toFixed(2)} (\u00a5{(lvl.amount / 10000).toFixed(1)}\u4e07)
+                      {lvl.triggered ? '●' : '○'} 档{i + 1} {lvl.price.toFixed(2)} (¥{(lvl.amount / 10000).toFixed(1)}万)
                     </span>
                   ))}
                 </div>
                 <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
                   {p.status === 'active' && (
                     <>
-                      <button className="sm" onClick={() => toggleStatus(p.id, 'completed')}>\u6807\u8bb0\u5b8c\u6210</button>
-                      <button className="sm" onClick={() => toggleStatus(p.id, 'cancelled')}>\u53d6\u6d88</button>
+                      <button className="sm" onClick={() => toggleStatus(p.id, 'completed')}>标记完成</button>
+                      <button className="sm" onClick={() => toggleStatus(p.id, 'cancelled')}>取消</button>
                     </>
                   )}
                   {p.status !== 'active' && (
-                    <button className="sm" onClick={() => toggleStatus(p.id, 'active')}>\u91cd\u542f</button>
+                    <button className="sm" onClick={() => toggleStatus(p.id, 'active')}>重启</button>
                   )}
-                  <button className="sm danger" onClick={() => remove(p.id)}>\u5220\u9664</button>
+                  <button className="sm danger" onClick={() => remove(p.id)}>删除</button>
                 </div>
               </div>
             ))}
@@ -422,7 +422,7 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
   )
 }
 
-/* ────────── \u603b\u89c8\u9876\u90e8\u63d0\u793a banner ────────── */
+/* ────────── 总览顶部提示 banner ────────── */
 
 interface BannerProps {
   alerts: BuyPlanAlert[]
@@ -436,16 +436,16 @@ export function BuyPlanBanner({ alerts }: BannerProps) {
       border: '1px solid var(--red)', background: 'var(--bg2)',
     }}>
       <div style={{ fontSize: '.8rem', color: 'var(--red)', marginBottom: 6, fontWeight: 600 }}>
-        \ud83d\udd14 \u52a0\u4ed3\u8ba1\u5212\u89e6\u53d1
+        🔔 加仓计划触发
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {alerts.map(a => (
           <div key={a.planId} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.85rem' }}>
             <span style={{ fontWeight: 600 }}>{a.symbol}</span>
             {a.name && <span style={{ color: 'var(--fg2)' }}>{a.name}</span>}
-            <span style={{ color: 'var(--fg2)' }}>\u73b0\u4ef7 {a.currentPrice.toFixed(2)} \u2264 \u6863 {a.triggeredLevel} (\u89e6\u53d1\u4ef7 {a.triggerPrice.toFixed(2)})</span>
+            <span style={{ color: 'var(--fg2)' }}>现价 {a.currentPrice.toFixed(2)} ≤ 档 {a.triggeredLevel} (触发价 {a.triggerPrice.toFixed(2)})</span>
             <span style={{ marginLeft: 'auto', color: 'var(--green)', fontWeight: 600 }}>
-              \u5efa\u8bae\u52a0\u4ed3 \u00a5{a.amount.toLocaleString()}
+              建议加仓 ¥{a.amount.toLocaleString()}
             </span>
           </div>
         ))}
