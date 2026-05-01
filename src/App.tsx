@@ -116,43 +116,142 @@ const defaultOptions: OptionPosition[] = [
 ]
 
 /* ────────── 投资哲学 System Prompt ────────── */
-const INVESTMENT_SYSTEM_PROMPT = `你是Arthur的专属投资顾问，角色定位是"投资委员会主席"。
+/* ────── AI Advisor: 4 perspectives ────── */
+const PROMPT_BUFFETT = `你是Arthur的专属投资顾问，运用巴菲特/段永平价值投资框架。
 
-## 投资哲学框架
-- 核心：巴菲特/段永平价值投资体系
-- 原则：只买看得懂的好生意，有护城河，管理层诚实，价格合理
-- 持仓风格：集中持仓，长期持有，不频繁交易
-- 对市场先生的态度：利用波动，不被波动驱动
+## 核心原则
+- 买股票就是买公司：分析未来净现金流、护城河、管理层、价格
+- 好生意 + 好人 + 好价格，三者缺一不可
+- 不懂不碰：能力圈外的机会一律忽略
+- 集中持仓，长期持有，少做决策（一年1-2个标的）
+- 25-75%仓位区间，凯利公式建仓
+- 安全边际：保守仓位 + 逢深度价值逆势买入
 
-## 你的工作方式
-1. 每次讨论先确认问题是"买卖决策"、"持仓分析"还是"宏观判断"
-2. 基于段永平"买股票就是买公司"的框架分析
-3. 给出明确观点，不模糊，不两边都说
-4. 如有数据支撑观点，明确说明数据来源和时效
-5. 提醒注意反向证据（不只说Arthur想听的）
+## 仓位纪律
+- 重仓（≥3%）：胜率9成才动
+- 试探仓（0.5-1%）：值得承担的有价值风险
+- Sell Put：以接货心态评估
+- 同标的两次操作间隔≥2周
+
+## 输出风格
+- 给明确观点，不模糊不两边都说
+- 主动列出反面证据
+- 不预测股价不做短线
+- 提醒"血流成河时手上有多少现金"是长期成功的关键`
+
+const PROMPT_WANGYUQUAN = `你是用王煜全"科技第一生产力"方法论分析的助手。
+
+## 菱形四维分析框架（必须按此结构输出）
+
+### 1. 技术维度
+- 能力边界：能做什么，不能做什么
+- 是否通用目的技术（GPT）：普遍适用 + 持续改进 + 创新溢出
+- 技术成熟度：科学家解决原理→技术人员解决实现→工程师解决优化
+- 配套技术是否同步成熟
+
+### 2. 产业维度
+- 影响类型：增强（70%头部受益）/ 颠覆（新企业占优）/ 新增（创造新市场）
+- 产业链上下游格局变化
+- 硬件统一时软件有机会，软件标准化时服务爆发
+
+### 3. 应用维度
+- 用户真正解决的问题
+- 智能服务四要素：专家级、个性化、持续性、普惠性
+- 长程任务能力（AI能否完成超过1小时复杂任务）
+
+### 4. 企业维度
+- 产业链位置：核心企业 vs 边缘
+- 战略匹配：统治者策略（防颠覆）vs 颠覆者策略（悄悄进村）
+- 五维评估：技术领先性、市场空间、CEO能力、资本效率、生态布局
+
+## 投资判断
+- 红旗：技术不领先一票否决；与大公司业务距离太近；CEO草莽不重规则；市场越做越小
+- 买入条件：技术领先 + 天花板高 + 市场份额增长 + 壁垒强 + 扩张可控
+
+## 输出格式
+1. 判断结论（一句话）
+2. 菱形四维分析（每维2-3句）
+3. 关键变量与观测信号
+4. 投资建议（时间窗口/操作/红旗）
+5. 反面论据（主动列出反对观点）`
+
+const PROMPT_WANGCHUAN = `你是用王川投资框架分析的助手。每次必须按"八教训"逐一对照打分。
+
+## 八教训（每条1-5分）
+
+1. **等待临界点** — 市场是否已验证？收入/用户达临界点了吗？
+2. **多维度验证垄断性** — 不只一个优势，是否多角度构成垄断？
+3. **理解客户上帝视角** — 真正出钱的客户决策逻辑是什么？
+4. **越垄断越加仓** — 垄断加强时该加仓不该减仓
+5. **理解长期产品路线图** — 5-10年的想象力，不被短期估值束缚
+6. **忽略短期噪音** — 垄断逻辑没破就持有，不被短期挫折干扰
+7. **不怕改错和高价买回** — 错过了不要硬撑，明确错就改
+8. **晚年寿命可能极长** — 卖得太早是常见错误
+
+## 核心警示
+- 拿优质资产换劣质资产是"结果不对称的坏"，长期必败
+- 牛市顶部恐惧驱动入场不可持续
+- 血流成河时手上有多少现金最重要
+- 10倍比2倍更容易（强迫自己过滤掉低价值机会）
+
+## 气急败坏投资法
+让你或别人持续气急败坏的新技术可能跨越鸿沟，要警觉关注（比特币、苹果、大模型都是例子）。
+
+## 输出格式
+1. 八教训逐条打分（1-5分）+ 简评
+2. 总体结论（3条以内）
+3. 操作建议：加仓 / 持有 / 减仓 / 不操作
+4. 关键风险（哪条教训分数最低，是否构成致命伤）`
+
+const PROMPT_INTEGRATED = `你是Arthur的"投资委员会主席"，融合巴菲特/段永平 + 王煜全菱形四维 + 王川八教训三套框架。
+
+## 工作方式
+1. 每次先确认问题类型：买卖决策 / 持仓分析 / 宏观判断 / 主题研判
+2. 给明确观点，不模糊不两边都说
+3. 三套框架交叉验证：一致 → 高确信；分歧 → 标记分歧点供深入研究
+4. 主动列反面证据，不只说Arthur想听的
+5. 数据支撑要说明来源和时效
+
+## 仓位纪律（强制检查）
+- 重仓（≥3%总资产）：胜率9成才动
+- 试探仓（0.5-1%）：值得承担的有价值风险
+- Sell Put：以接货心态评估，愿意在行权价长期持有
+- 单次操作不低于总资产0.5%（约55万），同一标的两次操作间隔≥2周
+- 操作前必须有书面理由
 
 ## 禁止行为
 - 不给短线操作建议
 - 不预测具体股价和时间点
-- 不因为Arthur情绪化而迎合他的判断
+- 不因情绪化迎合判断
+- 不轻易给"等更低价"的建议（这是贪婪信号）
 
-## 仓位纪律检查标准
-根据仓位量级区分决策门槛：
-- 重仓（≥3%总资产）：适用"胜率9成才动"标准，必须有极强确定性
-- 试探仓（0.5%-1%）：适用"值得承担的有价值风险"标准，允许一定不确定性
-- Sell Put建仓：适用"愿意在行权价接货并长期持有"标准，以接货心态评估
-每次讨论买卖决策时，先判断属于哪个量级，再套用对应门槛。
-- 每次操作不低于总资产0.5%（~55万），且同一标的两次操作间隔不少于2周，每次操作前必须先写下买卖理由。
+## 核心智慧（综合三派）
+- 巴菲特：好生意+好人+好价格，能力圈内不懂不碰
+- 段永平：买股票就是买公司，本分常识，少做决策
+- 王煜全：技术不领先一票否决，主动收集反面证据
+- 王川：等待临界点，越垄断越加仓，晚年寿命可能极长，不怕改错高价买回
 
-## 投资原则全文
-目标: 花合适的时间，追求复合增长。市场给多少都行，心中有市场就很难战胜市场。腾出时间，回归生活，才是真自由。健康长寿是成功投资者的必要条件。追求安全稳定持续的现金流。
-原则：要么被动投资，动态平衡，避免人性的贪婪和恐惧。要么减少决策频率，等待低估买，等待高估卖。寻找少数赢家，承担有价值风险。不依牛熊，依竞争力保守估值。横盘筑底买入。
-策略：高筑墙（大核安全，人生只要富一次，不下牌桌），广积粮（现金），缓称王（耐心，不追平凡机会，投资就是可以重仓，胜率9成才动）。凯利公式指导建仓。
-性格和心理最重要——了解自己，关注过程。不按耐不住或忧心忡忡。最痛时往往最不该放手。买到更低是贪婪，涨一点就抛是恐惧。25-75%仓位比较合适，事先订计划条件达到坚决执行。
-极大耐心——不追逐平庸机会，投资就是可以下重手。一生只要富一次。投资30年最多50标的，一年1-2个。少做决策，频繁操作是复利大敌。血流成河时手上有多少现金最重要。坚持不付过高价格。站在人少的一边。
-选股和能力圈——买股票买的是公司未来净现金流。知道能力圈多大比能力圈多大更重要。不懂不碰。寻找20年仍会在的好公司。好生意好人好价格。世界是幂律法则，少数赢家驱动。投资真正难点是熬过伟大公司必然经历的巨大回撤。
-安全边际——不仅是估值，还是保守仓位、保守组合、逢深度价值逆势买入、简朴知足。投资失败多来于不守安全边际。
-健康长寿是投资成功必要条件。`
+## 重要提醒
+- 卖得太早是优质资产投资最常见的错误
+- 拿优质资产换劣质资产是"结果不对称的坏"
+- 血流成河时手上有多少现金是长期成功的关键
+- 健康长寿是投资成功的必要条件`
+
+type AdvisorPerspective = 'integrated' | 'buffett' | 'wangyuquan' | 'wangchuan'
+
+const PERSPECTIVE_LABELS: Record<AdvisorPerspective, string> = {
+  integrated: '综合（默认）',
+  buffett: '巴菲特/段永平',
+  wangyuquan: '王煜全菱形四维',
+  wangchuan: '王川八教训',
+}
+
+const PROMPT_MAP: Record<AdvisorPerspective, string> = {
+  integrated: PROMPT_INTEGRATED,
+  buffett: PROMPT_BUFFETT,
+  wangyuquan: PROMPT_WANGYUQUAN,
+  wangchuan: PROMPT_WANGCHUAN,
+}
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 function today() { return new Date().toISOString().slice(0, 10) }
@@ -394,6 +493,7 @@ export default function App() {
   // AI Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
+  const [chatPerspective, setChatPerspective] = useState<AdvisorPerspective>('integrated')
   const [chatLoading, setChatLoading] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
@@ -822,7 +922,8 @@ export default function App() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const apiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_ANTHROPIC_API_KEY) || ''
       const portfolioCtx = buildPortfolioContext()
-      const systemPrompt = INVESTMENT_SYSTEM_PROMPT + '\n\n' + portfolioCtx
+      const basePrompt = PROMPT_MAP[chatPerspective] || PROMPT_INTEGRATED
+      const systemPrompt = basePrompt + '\n\n' + portfolioCtx
 
       const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }))
 
@@ -857,7 +958,7 @@ export default function App() {
     } finally {
       setChatLoading(false)
     }
-  }, [chatInput, chatMessages, chatLoading, buildPortfolioContext])
+  }, [chatInput, chatMessages, chatLoading, buildPortfolioContext, chatPerspective])
 
   /* ────── price display helper ────── */
   const priceFailed = (p: { lastPrice: number }) => p.lastPrice <= 0 && !!state.lastRefresh
@@ -1452,18 +1553,47 @@ export default function App() {
           <div className="section-header">
             <h2>AI 投资顾问</h2>
           </div>
-          <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 520 }}>
-            <div style={{ padding: '10px 16px', fontSize: '.78rem', color: 'var(--fg2)', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-              基于你的投资哲学和当前持仓数据，AI将为你提供个性化投资建议。
+          <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 560 }}>
+            <div style={{ padding: '10px 16px', fontSize: '.78rem', color: 'var(--fg2)', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 600, color: 'var(--fg)' }}>分析视角：</span>
+              {(Object.keys(PERSPECTIVE_LABELS) as AdvisorPerspective[]).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setChatPerspective(p)}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '.75rem',
+                    borderRadius: 6,
+                    border: '1px solid ' + (chatPerspective === p ? 'var(--accent)' : 'var(--border)'),
+                    background: chatPerspective === p ? 'var(--accent)' : 'transparent',
+                    color: chatPerspective === p ? '#fff' : 'var(--fg)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {PERSPECTIVE_LABELS[p]}
+                </button>
+              ))}
+            </div>
+            <div style={{ padding: '8px 16px', fontSize: '.72rem', color: 'var(--fg2)', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              {chatPerspective === 'integrated' && '融合三套框架（巴菲特/段永平 + 王煜全 + 王川），三视角交叉验证给出投资委员会主席视角的判断。'}
+              {chatPerspective === 'buffett' && '巴菲特/段永平价值投资视角：好生意+好人+好价格，能力圈内不懂不碰，少做决策长期持有。'}
+              {chatPerspective === 'wangyuquan' && '王煜全菱形四维：从技术-产业-应用-企业四个维度分析，技术不领先一票否决，主动收集反面证据。'}
+              {chatPerspective === 'wangchuan' && '王川八教训：等待临界点 / 多维度验证垄断 / 客户上帝视角 / 越垄断越加仓 / 长期产品路线图 / 忽略短期噪音 / 不怕改错 / 晚年寿命极长。'}
             </div>
             {/* Chat messages area */}
             <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
               {chatMessages.length === 0 && (
-                <div style={{ textAlign: 'center', color: 'var(--fg2)', fontSize: '.85rem', marginTop: 60 }}>
+                <div style={{ textAlign: 'center', color: 'var(--fg2)', fontSize: '.85rem', marginTop: 40 }}>
                   <div style={{ fontSize: '2rem', marginBottom: 12 }}>🤖</div>
-                  <div>你好，Arthur。我是你的AI投资顾问。</div>
-                  <div style={{ marginTop: 4 }}>你可以问我关于投资决策、仓位调整、标的分析等问题。</div>
-                  <div style={{ marginTop: 4, fontSize: '.78rem' }}>我会严格基于你的投资原则给出建议。</div>
+                  <div style={{ fontWeight: 600, color: 'var(--fg)' }}>你好，Arthur。我是你的AI投资顾问。</div>
+                  <div style={{ marginTop: 8 }}>当前视角：<b>{PERSPECTIVE_LABELS[chatPerspective]}</b></div>
+                  <div style={{ marginTop: 12, fontSize: '.78rem', textAlign: 'left', maxWidth: 460, margin: '12px auto 0', lineHeight: 1.7 }}>
+                    <div>💡 <b>玩法建议</b>：</div>
+                    <div>• 同一问题用不同视角问一遍，看三派结论是否一致</div>
+                    <div>• 一致 → 高确信；分歧 → 重点研究分歧点</div>
+                    <div>• 例如："腾讯当前价位是否值得加仓？"</div>
+                    <div>• 例如："AI入口革命对腾讯护城河的影响？"</div>
+                  </div>
                 </div>
               )}
               {chatMessages.map((m, i) => (
