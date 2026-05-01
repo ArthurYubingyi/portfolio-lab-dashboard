@@ -30,7 +30,7 @@ export interface BuyPlan {
   targetHigh: number  // 区间上限（首仓价）
   targetLow: number   // 区间下限（最低价）
   maxCapital: number
-  winRate: number     // 1-9
+  winRate: number     // 0-100 (胜率百分比)
   kellyFraction: number  // 计算后的 f*
   totalAssets: number
   pyramid: PyramidLevel[]
@@ -48,32 +48,47 @@ function genId() { return Math.random().toString(36).slice(2, 10) }
  * 4-6: 较好 (58-68%)
  * 7-9: 很好到极佳 (72-85%)
  */
-function winRateToProb(score: number): number {
-  const s = Math.max(1, Math.min(9, score))
-  const map: Record<number, number> = {
-    1: 0.45, 2: 0.50, 3: 0.55,
-    4: 0.60, 5: 0.65, 6: 0.70,
-    7: 0.75, 8: 0.80, 9: 0.85,
-  }
-  return map[s] ?? 0.65
+/**
+ * 旧版本兼容：1-9 打分制 → 概率值
+ * 1→45%, 2→50%, ..., 9→85%（每档+5%）
+ */
+export function legacyScoreToPercent(score: number): number {
+  const s = Math.max(1, Math.min(9, Math.round(score)))
+  return 40 + s * 5
+}
+
+/**
+ * 自动迁移：判断输入值是 1-9 旧打分还是 0-100 新百分比
+ * 旧值 ≤9 → 转换；新值（≥10 或带小数）原样
+ */
+export function migrateWinValue(v: number): number {
+  if (!isFinite(v) || v < 0) return 50
+  if (v >= 1 && v <= 9 && Number.isInteger(v)) return legacyScoreToPercent(v)
+  return Math.max(0, Math.min(100, v))
 }
 
 /**
  * 凯利公式：f* = (bp - q) / b
- * @param winScore 胜率分数 1-9
+ * @param winPercent 胜率（0-100，例如 65 代表 65%）
  * @param oddsB 赔率 b（赢时回报/亏损单位）。默认2，即1赔2
- * 安全上限25%（单标的不超过总资产25%）
+ * 返回 f（原始凯利）+ fHalf（半凯利，更稳妥）
+ * - f 安全上限 25%
+ * - fHalf 安全上限 12.5%（实际推荐使用）
  */
-export function computeKelly(winScore: number, oddsB: number = 2): { p: number; q: number; b: number; f: number } {
-  const p = winRateToProb(winScore)
+export function computeKelly(winPercent: number, oddsB: number = 2): { p: number; q: number; b: number; f: number; fHalf: number } {
+  const pct = Math.max(0, Math.min(100, winPercent))
+  const p = pct / 100
   const q = 1 - p
   const b = Math.max(0.5, oddsB)
   let f = (b * p - q) / b
   if (!isFinite(f) || f < 0) f = 0
-  // 半凯利更保守（巴菲特/段永平偏好）
-  // 仍然给25%安全上限
   f = Math.min(f, 0.25)
-  return { p, q, b, f: Math.round(f * 1000) / 1000 }
+  const fHalf = Math.min(f / 2, 0.125)
+  return {
+    p, q, b,
+    f: Math.round(f * 1000) / 1000,
+    fHalf: Math.round(fHalf * 1000) / 1000,
+  }
 }
 
 /* ────────── 金字塔生成 ────────── */
@@ -124,7 +139,10 @@ export function useBuyPlans() {
   const [plans, setPlans] = useState<BuyPlan[]>(() => {
     try {
       const raw = localStorage.getItem(LS_KEY)
-      return raw ? JSON.parse(raw) as BuyPlan[] : []
+      if (!raw) return []
+      const parsed = JSON.parse(raw) as BuyPlan[]
+      // 迁移旧 1-9 胜率值 → 0-100 百分比
+      return parsed.map(p => ({ ...p, winRate: migrateWinValue(p.winRate) }))
     } catch { return [] }
   })
 
@@ -193,7 +211,7 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
     targetHigh: '',
     targetLow: '',
     maxCapital: '',
-    winRate: '5',
+    winRate: '50',
     oddsB: '2',
     note: '',
   })
@@ -213,7 +231,7 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
   const hi = parseFloat(draft.targetHigh) || 0
   const lo = parseFloat(draft.targetLow) || 0
   const cap = parseFloat(draft.maxCapital) || 0
-  const win = parseInt(draft.winRate) || 5
+  const win = parseFloat(draft.winRate) || 50
   const oddsB = parseFloat(draft.oddsB) || 2
 
   const pyramid = useMemo(
@@ -222,9 +240,10 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
   )
   const kelly = useMemo(() => computeKelly(win, oddsB), [win, oddsB])
 
+  // 推荐仓位采用半凯利（更稳妥）
   const recommendedTotalCapital = useMemo(() => {
     if (totalAssets <= 0) return null
-    return Math.round(totalAssets * kelly.f)
+    return Math.round(totalAssets * kelly.fHalf)
   }, [totalAssets, kelly])
 
   const canSave = draft.symbol && pyramid.length > 0 && cap > 0
@@ -241,14 +260,14 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
       targetLow: lo,
       maxCapital: cap,
       winRate: win,
-      kellyFraction: kelly.f,
+      kellyFraction: kelly.fHalf,
       totalAssets,
       pyramid,
       status: 'active',
       note: draft.note || undefined,
     }
     setPlans([plan, ...plans])
-    setDraft({ symbol: '', name: '', currentPrice: '', targetHigh: '', targetLow: '', maxCapital: '', winRate: '5', oddsB: '2', note: '' })
+    setDraft({ symbol: '', name: '', currentPrice: '', targetHigh: '', targetLow: '', maxCapital: '', winRate: '50', oddsB: '2', note: '' })
   }
 
   const remove = (id: string) => {
@@ -312,14 +331,16 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
             <input type="number" value={draft.maxCapital} onChange={e => setDraft({ ...draft, maxCapital: e.target.value })} placeholder="如 2000000" />
           </div>
           <div className="field">
-            <label>胜率判断 (1=很差, 9=高胜率)</label>
-            <input type="number" min={1} max={9} value={draft.winRate} onChange={e => setDraft({ ...draft, winRate: e.target.value })} />
+            <label>胜率 (0-100%)</label>
+            <input type="number" min={0} max={100} step={1} value={draft.winRate}
+              onChange={e => setDraft({ ...draft, winRate: e.target.value })}
+              placeholder="例如 65 代表 65%" />
           </div>
           <div className="field">
             <label>赔率 b (赢:亏比)</label>
             <input type="number" min={0.5} step={0.5} value={draft.oddsB} onChange={e => setDraft({ ...draft, oddsB: e.target.value })} placeholder="默认2 (1赔2)" />
             <div style={{ fontSize: '.7rem', color: 'var(--fg2)', marginTop: 2 }}>
-              当前胜率 {Math.round(kelly.p * 100)}% · 赔率 {kelly.b} · 凯利 f*={kelly.f} · 推荐总仓位
+              胜率 {Math.round(kelly.p * 100)}% · 赔率 {kelly.b} · 凯利 f*={kelly.f} · 半凯利 {(kelly.fHalf * 100).toFixed(1)}% · 推荐总仓位
               {recommendedTotalCapital ? ` ¥${recommendedTotalCapital.toLocaleString()}` : ' (请填总资产)'}
             </div>
           </div>
@@ -405,7 +426,7 @@ export function BuyPlansTab({ symbolHints, totalAssets }: BuyPlansTabProps) {
                   <span>创建价 {p.currentPrice}</span>
                   <span>区间 {p.targetLow}–{p.targetHigh}</span>
                   <span>总资金 ¥{p.maxCapital.toLocaleString()}</span>
-                  <span>胜率 {p.winRate}/9 · f*={p.kellyFraction}</span>
+                  <span>胜率 {p.winRate}% · 半凯利={(p.kellyFraction * 100).toFixed(1)}%</span>
                 </div>
                 {p.note && <div style={{ fontSize: '.78rem', color: 'var(--fg2)', marginTop: 4 }}>{p.note}</div>}
                 <div style={{ marginTop: 8, fontSize: '.75rem' }}>
@@ -459,14 +480,18 @@ function useKellyTable(symbolHints: { symbol: string; name: string; lastPrice: n
   const [rows, setRows] = useState<KellyRow[]>(() => {
     try {
       const raw = localStorage.getItem(KELLY_TABLE_LS_KEY)
-      if (raw) return JSON.parse(raw) as KellyRow[]
+      if (raw) {
+        const parsed = JSON.parse(raw) as KellyRow[]
+        // 迁移旧 1-9 胜率值 → 0-100 百分比
+        return parsed.map(r => ({ ...r, winRate: migrateWinValue(r.winRate) }))
+      }
     } catch { /* ignore */ }
     // 默认从持仓股初始化
     return symbolHints.map(h => ({
       symbol: h.symbol,
       name: h.name,
       currentValueCny: h.valueCny || 0,
-      winRate: 5,
+      winRate: 50,
       oddsB: 2,
     }))
   })
@@ -509,7 +534,7 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
     [symbolHints],
   )
   const { rows, setRows } = useKellyTable(hintsWithValue)
-  const [newRow, setNewRow] = useState({ symbol: '', name: '', winRate: '5', oddsB: '2', note: '' })
+  const [newRow, setNewRow] = useState({ symbol: '', name: '', winRate: '50', oddsB: '2', note: '' })
 
   const updateRow = (i: number, field: keyof KellyRow, value: number | string) => {
     setRows(prev => {
@@ -531,11 +556,11 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
       symbol: newRow.symbol.trim(),
       name: newRow.name.trim() || newRow.symbol.trim(),
       currentValueCny: 0,
-      winRate: parseInt(newRow.winRate) || 5,
+      winRate: parseFloat(newRow.winRate) || 50,
       oddsB: parseFloat(newRow.oddsB) || 2,
       note: newRow.note.trim() || undefined,
     }])
-    setNewRow({ symbol: '', name: '', winRate: '5', oddsB: '2', note: '' })
+    setNewRow({ symbol: '', name: '', winRate: '50', oddsB: '2', note: '' })
   }
 
   return (
@@ -544,8 +569,8 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
         <h2>📐 凯利仓位速查表</h2>
       </div>
       <div style={{ fontSize: '.78rem', color: 'var(--fg2)', marginBottom: 10 }}>
-        填写每只股票的胜率和赔率，自动计算凯利推荐仓位 vs 实际仓位。建议仓位 = min(凯利f*, 25%) × 总资产。
-        差距大时考虑加仓 / 减仓。
+        填写每只股票的胜率（0-100%）和赔率，自动计算凯利推荐仓位 vs 实际仓位。
+        <strong>建议仓位采用半凯利（凯利 f* / 2），更稳妥</strong>：min(f*/2, 12.5%) × 总资产。差距大时考虑加仓 / 减仓。
       </div>
       <div className="table-wrap">
         <table>
@@ -553,10 +578,11 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
             <tr>
               <th>代码</th>
               <th>名称</th>
-              <th className="r">胜率(1-9)</th>
+              <th className="r">胜率(%)</th>
               <th className="r">赔率b</th>
               <th className="r">凯利f*</th>
-              <th className="r">建议仓位</th>
+              <th className="r" title="采用半凯利，上限 12.5%">建议仓位 %</th>
+              <th className="r">建议金额</th>
               <th className="r">实际市值</th>
               <th className="r">实际仓位%</th>
               <th className="r">差距</th>
@@ -568,13 +594,14 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
           <tbody>
             {rows.map((r, i) => {
               const k = computeKelly(r.winRate, r.oddsB)
-              const recCapital = totalAssets > 0 ? totalAssets * k.f : 0
+              // 采用半凯利作为推荐仓位
+              const recPct = k.fHalf * 100
+              const recCapital = totalAssets > 0 ? totalAssets * k.fHalf : 0
               const actualPct = totalAssets > 0 ? (r.currentValueCny / totalAssets * 100) : 0
-              const recPct = k.f * 100
               const diff = recPct - actualPct
               let suggestion = '持有'
               let color = 'var(--fg)'
-              if (k.f === 0) {
+              if (k.fHalf === 0) {
                 suggestion = '不建议持有'
                 color = 'var(--red)'
               } else if (diff > 2) {
@@ -589,16 +616,17 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
                   <td><b>{r.symbol}</b></td>
                   <td>{r.name}</td>
                   <td className="r">
-                    <input type="number" min={1} max={9} value={r.winRate}
-                      onChange={e => updateRow(i, 'winRate', parseInt(e.target.value) || 5)}
-                      style={{ width: 50, padding: '2px 4px', textAlign: 'right' }} />
+                    <input type="number" min={0} max={100} step={1} value={r.winRate}
+                      onChange={e => updateRow(i, 'winRate', parseFloat(e.target.value) || 50)}
+                      style={{ width: 60, padding: '2px 4px', textAlign: 'right' }} />
                   </td>
                   <td className="r">
                     <input type="number" min={0.5} step={0.5} value={r.oddsB}
                       onChange={e => updateRow(i, 'oddsB', parseFloat(e.target.value) || 2)}
                       style={{ width: 60, padding: '2px 4px', textAlign: 'right' }} />
                   </td>
-                  <td className="r">{k.f.toFixed(3)}</td>
+                  <td className="r" style={{ color: 'var(--fg2)' }}>{(k.f * 100).toFixed(1)}%</td>
+                  <td className="r"><b>{recPct.toFixed(1)}%</b></td>
                   <td className="r">¥{Math.round(recCapital).toLocaleString()}</td>
                   <td className="r">¥{Math.round(r.currentValueCny).toLocaleString()}</td>
                   <td className="r">{actualPct.toFixed(1)}%</td>
@@ -617,7 +645,7 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
               )
             })}
             {rows.length === 0 && (
-              <tr><td colSpan={12} style={{ textAlign: 'center', padding: 16, color: 'var(--fg2)' }}>暂无数据，添加股票开始</td></tr>
+              <tr><td colSpan={13} style={{ textAlign: 'center', padding: 16, color: 'var(--fg2)' }}>暂无数据，添加股票开始</td></tr>
             )}
           </tbody>
         </table>
@@ -633,9 +661,9 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
           <label style={{ fontSize: '.75rem' }}>名称</label>
           <input value={newRow.name} onChange={e => setNewRow({ ...newRow, name: e.target.value })} placeholder="英伟达" />
         </div>
-        <div className="field" style={{ minWidth: 70 }}>
-          <label style={{ fontSize: '.75rem' }}>胜率</label>
-          <input type="number" min={1} max={9} value={newRow.winRate} onChange={e => setNewRow({ ...newRow, winRate: e.target.value })} />
+        <div className="field" style={{ minWidth: 80 }}>
+          <label style={{ fontSize: '.75rem' }}>胜率 %</label>
+          <input type="number" min={0} max={100} step={1} value={newRow.winRate} onChange={e => setNewRow({ ...newRow, winRate: e.target.value })} placeholder="50" />
         </div>
         <div className="field" style={{ minWidth: 70 }}>
           <label style={{ fontSize: '.75rem' }}>赔率</label>
@@ -646,7 +674,8 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
 
       {/* 总结统计 */}
       {rows.length > 0 && (() => {
-        const totalRecPct = rows.reduce((sum, r) => sum + computeKelly(r.winRate, r.oddsB).f * 100, 0)
+        // 总建议仓位：采用半凯利汇总
+        const totalRecPct = rows.reduce((sum, r) => sum + computeKelly(r.winRate, r.oddsB).fHalf * 100, 0)
         const totalActualPct = rows.reduce((sum, r) => sum + (totalAssets > 0 ? r.currentValueCny / totalAssets * 100 : 0), 0)
         return (
           <div style={{ marginTop: 12, padding: 10, background: 'var(--bg2)', borderRadius: 6, fontSize: '.8rem' }}>
