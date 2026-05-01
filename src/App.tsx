@@ -3,6 +3,9 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
+import { useThemes, ThemesTab } from './themes'
+import { useDecisions, DecisionForm, DecisionsTab, type Decision } from './decisions'
+import { SignalsTab } from './signals'
 
 /* ────────── types ────────── */
 interface Position {
@@ -478,7 +481,25 @@ export default function App() {
   })
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'advisor'>('overview')
+  const [tab, setTab] = useState<'overview' | 'positions' | 'options' | 'cashflow' | 'themes' | 'decisions' | 'signals' | 'advisor'>('overview')
+
+  /* ────── 产业洞察工作站：主题 + 决策 ────── */
+  const { themes, setThemes } = useThemes()
+  const { decisions, setDecisions, addDecision, daysSinceLast } = useDecisions()
+
+  // pending decision context: 决策表单确认后才真正执行的持仓变更
+  const [pendingDecision, setPendingDecision] = useState<{
+    symbol: string
+    symbolName?: string
+    direction: Decision['direction']
+    apply: () => void
+  } | null>(null)
+
+  const symbolNameMap = useMemo(() => {
+    const m: Record<string, string> = {}
+    state.positions.forEach(p => { m[p.symbol] = p.name })
+    return m
+  }, [state.positions])
 
   // Dialogs
   const [showAddStock, setShowAddStock] = useState(false)
@@ -738,42 +759,73 @@ export default function App() {
     const qty = parseFloat(newStock.qty)
     const price = parseFloat(newStock.lastPrice)
     if (!newStock.symbol || !newStock.name || isNaN(qty) || qty <= 0) { showToast('请填写完整信息'); return }
-    update(s => ({
-      ...s,
-      positions: [...s.positions, {
-        id: genId(), symbol: newStock.symbol.toUpperCase(), name: newStock.name,
-        qty, currency: newStock.currency, market: newStock.market,
-        lastPrice: isNaN(price) ? 0 : price, lastUpdated: today(),
-      }]
-    }))
-    setNewStock({ symbol: '', name: '', qty: '', currency: 'CNY', market: 'A', lastPrice: '' })
+    const sym = newStock.symbol.toUpperCase()
+    const name = newStock.name
+    const cur = newStock.currency
+    const mkt = newStock.market
+    const px = isNaN(price) ? 0 : price
+    // 触发决策日志强制表单（新建仓）
     setShowAddStock(false)
-    showToast('已添加持仓')
+    setPendingDecision({
+      symbol: sym,
+      symbolName: name,
+      direction: 'new',
+      apply: () => {
+        update(s => ({
+          ...s,
+          positions: [...s.positions, {
+            id: genId(), symbol: sym, name, qty, currency: cur, market: mkt,
+            lastPrice: px, lastUpdated: today(),
+          }]
+        }))
+        setNewStock({ symbol: '', name: '', qty: '', currency: 'CNY', market: 'A', lastPrice: '' })
+        showToast('决策已记录，持仓已添加')
+      }
+    })
   }
 
   /* ────── delta qty (adjust shares) ────── */
   const handleDeltaQty = () => {
     if (!editingPosition) return
     const delta = parseFloat(editDeltaQty)
-    if (isNaN(delta)) { showToast('请输入有效数字'); return }
-    update(s => ({
-      ...s,
-      positions: s.positions.map(p =>
-        p.id === editingPosition.id
-          ? { ...p, qty: Math.max(0, p.qty + delta), lastUpdated: today() }
-          : p
-      )
-    }))
+    if (isNaN(delta) || delta === 0) { showToast('请输入有效数字'); return }
+    const target = editingPosition
+    const newQty = Math.max(0, target.qty + delta)
+    const direction: Decision['direction'] = newQty === 0 ? 'close' : (delta > 0 ? 'add' : 'reduce')
     setEditingPosition(null)
     setEditDeltaQty('')
-    showToast(delta >= 0 ? `已增持 ${delta} 股` : `已减持 ${Math.abs(delta)} 股`)
+    setPendingDecision({
+      symbol: target.symbol,
+      symbolName: target.name,
+      direction,
+      apply: () => {
+        update(s => ({
+          ...s,
+          positions: s.positions.map(p =>
+            p.id === target.id
+              ? { ...p, qty: newQty, lastUpdated: today() }
+              : p
+          )
+        }))
+        showToast(delta >= 0 ? `决策已记录，增持 ${delta} 股` : `决策已记录，减持 ${Math.abs(delta)} 股`)
+      }
+    })
   }
 
   /* ────── delete position ────── */
   const handleDeletePosition = (id: string) => {
-    if (!confirm('确定删除此持仓？')) return
-    update(s => ({ ...s, positions: s.positions.filter(p => p.id !== id) }))
-    showToast('已删除')
+    const p = state.positions.find(x => x.id === id)
+    if (!p) return
+    if (!confirm(`确定删除 ${p.name}（${p.symbol}）持仓？将弹出决策日志表单。`)) return
+    setPendingDecision({
+      symbol: p.symbol,
+      symbolName: p.name,
+      direction: 'close',
+      apply: () => {
+        update(s => ({ ...s, positions: s.positions.filter(x => x.id !== id) }))
+        showToast('决策已记录，持仓已删除')
+      }
+    })
   }
 
   /* ────── add option ────── */
@@ -1162,7 +1214,7 @@ export default function App() {
 
       {/* Nav tabs */}
       <div style={{ display: 'flex', gap: 2, marginTop: 20, borderBottom: '2px solid var(--border)', paddingBottom: 0, flexWrap: 'wrap' }}>
-        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
+        {([['overview', '总览'], ['positions', '持仓'], ['options', '期权'], ['cashflow', '资金流'], ['themes', '主题'], ['decisions', '决策日志'], ['signals', '信号'], ['advisor', 'AI顾问']] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -1571,6 +1623,37 @@ export default function App() {
         </div>
       )}
 
+      {/* ===== THEMES TAB ===== */}
+      {tab === 'themes' && (
+        <div className="section" style={{ marginTop: 16 }}>
+          <ThemesTab
+            themes={themes}
+            setThemes={setThemes}
+            showToast={showToast}
+            symbolNameMap={symbolNameMap}
+          />
+        </div>
+      )}
+
+      {/* ===== DECISIONS TAB ===== */}
+      {tab === 'decisions' && (
+        <div className="section" style={{ marginTop: 16 }}>
+          <DecisionsTab
+            decisions={decisions}
+            setDecisions={setDecisions}
+            themes={themes}
+            showToast={showToast}
+          />
+        </div>
+      )}
+
+      {/* ===== SIGNALS TAB ===== */}
+      {tab === 'signals' && (
+        <div className="section" style={{ marginTop: 16 }}>
+          <SignalsTab />
+        </div>
+      )}
+
       {/* ===== AI ADVISOR TAB (#2) ===== */}
       {tab === 'advisor' && (
         <div className="section" style={{ marginTop: 16 }}>
@@ -1845,6 +1928,25 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* 决策日志强制表单 */}
+      <DecisionForm
+        open={!!pendingDecision}
+        symbol={pendingDecision?.symbol || ''}
+        symbolName={pendingDecision?.symbolName}
+        preDirection={pendingDecision?.direction}
+        themes={themes}
+        daysSinceLastOp={pendingDecision ? daysSinceLast(pendingDecision.symbol) : 9999}
+        onCancel={() => {
+          setPendingDecision(null)
+          showToast('已取消，本次持仓变更未执行')
+        }}
+        onConfirm={(d) => {
+          addDecision(d)
+          if (pendingDecision) pendingDecision.apply()
+          setPendingDecision(null)
+        }}
+      />
 
       {/* Toast */}
       {toast && <div className="toast">{toast}</div>}
