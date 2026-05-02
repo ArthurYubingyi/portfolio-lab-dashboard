@@ -616,7 +616,7 @@ interface KellyMetrics {
 function computeMetrics(r: KellyRow): KellyMetrics {
   const S = (r.moat || 0) + (r.mgmt || 0) + (r.valPct || 0)
   const pBase = Math.min(0.75, 0.5 + 0.02 * S)
-  const m = r.shrinkM > 0 ? r.shrinkM : 10
+  const m = 10  // 贝叶斯收缩参数，固定为 10
   const pAdj = (S * pBase + m * 0.5) / (S + m)
   const downAbs = Math.abs(r.rDown || 0)
   const b = downAbs > 0 ? (r.rUp || 0) / downAbs : 0
@@ -661,6 +661,7 @@ function KellyTermsPanel() {
           {item('评分 S', '= 护城河 + 管理 + 估值分位（0–15 分）。')}
           {item('p_base 基础胜率', '= min(0.75, 0.5 + 0.02×S)，由评分推导的原始胜率。')}
           {item('p_adj 修正胜率', '贝叶斯收缩后的胜率 = (S·p_base + m·0.5)/(S+m)，向 0.5 靠拢以避免过度自信。')}
+          {item('收缩参数 m（固定为 10）', '贝叶斯收缩参数，用于计算 p_adj 时让胜率向 0.5 靠拢，避免过度自信。值越大越保守。')}
           {item('赔率 b', '= R_up / |R_down|，赢亏比。')}
           {item('p0 盈亏平衡', '= 1 / (1+b)，胜率需突破此值才有正期望。')}
           {item('Edge 优势', '= b×p_adj − (1−p_adj)，期望收益 > 0 才值得投。')}
@@ -793,7 +794,6 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
               <th className="r">护城河</th>
               <th className="r">管理</th>
               <th className="r">估值分位</th>
-              <th className="r" title="贝叶斯收缩 m">m</th>
               <th className="r">S</th>
               <th className="r">p_base</th>
               <th className="r">p_adj</th>
@@ -870,10 +870,6 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
                     <NumInput value={r.valPct} step={0.1} min={0} max={5}
                       onChange={v => updateRow(i, 'valPct', v)} width={50} />
                   </td>
-                  <td className="r">
-                    <NumInput value={r.shrinkM} step={1} min={1}
-                      onChange={v => updateRow(i, 'shrinkM', v)} width={45} />
-                  </td>
                   <td className="r" style={{ color: 'var(--fg2)' }}>{m.S.toFixed(1)}</td>
                   <td className="r" style={{ color: 'var(--fg2)' }}>{(m.pBase * 100).toFixed(1)}%</td>
                   <td className="r" style={{ color: 'var(--fg2)' }}>{(m.pAdj * 100).toFixed(1)}%</td>
@@ -898,7 +894,7 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
               )
             })}
             {rows.length === 0 && (
-              <tr><td colSpan={22} style={{ textAlign: 'center', padding: 16, color: 'var(--fg2)' }}>暂无数据，添加股票开始</td></tr>
+              <tr><td colSpan={21} style={{ textAlign: 'center', padding: 16, color: 'var(--fg2)' }}>暂无数据，添加股票开始</td></tr>
             )}
           </tbody>
         </table>
