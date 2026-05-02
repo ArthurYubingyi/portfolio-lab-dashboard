@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 
 /**
  * 第三批 · 模块二 — 加仓金字塔工具
@@ -653,6 +653,57 @@ interface KellyPositionTableProps {
   totalAssets: number
 }
 
+/* 受控 number input（顶层定义，避免在父组件内重复创建导致卸载/重载失焦）
+   设计：
+   - 保留 draft 字符串状态以支持输入中间态（如输入 "3." 、空串）
+   - onChange 只要能 parse 出有限数就立刻 commit，触发上层重算
+   - prop.value 变化时同步到 draft（在用户未交互时） */
+const NumInput = React.memo(function NumInput({ value, onChange, step = 1, min, max, width = 60 }: {
+  value: number
+  onChange: (v: number) => void
+  step?: number
+  min?: number
+  max?: number
+  width?: number
+}) {
+  const [draft, setDraft] = useState<string>(() => String(value))
+  const focusedRef = useRef(false)
+  useEffect(() => {
+    // 仅在用户未聚焦本输入框时同步 prop 变更，避免覆盖输入中间态
+    if (!focusedRef.current && Number.isFinite(value)) {
+      const next = String(value)
+      setDraft(prev => (prev === next ? prev : next))
+    }
+  }, [value])
+  return (
+    <input
+      type="number"
+      value={draft}
+      step={step}
+      min={min}
+      max={max}
+      onFocus={() => { focusedRef.current = true }}
+      onChange={e => {
+        setDraft(e.target.value)
+        const n = parseFloat(e.target.value)
+        if (Number.isFinite(n)) onChange(n)
+      }}
+      onBlur={() => {
+        focusedRef.current = false
+        const n = parseFloat(draft)
+        if (!Number.isFinite(n)) {
+          setDraft(String(value))
+        } else {
+          // 提交最终值（以防 draft 与 prop 不同步）
+          if (n !== value) onChange(n)
+          setDraft(String(n))
+        }
+      }}
+      style={{ width, padding: '2px 4px', textAlign: 'right' }}
+    />
+  )
+})
+
 /* 术语解释面板（可折叠，默认展开） */
 function KellyTermsPanel() {
   const [open, setOpen] = useState(true)
@@ -762,35 +813,6 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
         shrinkM: 10,
       }
     }))
-  }
-
-  /* 渲染辅助：受控 number input，保留空字符串编辑过程，blur 时回填 */
-  function NumInput({ value, onChange, step = 1, min, max, width = 60 }: {
-    value: number
-    onChange: (v: number) => void
-    step?: number
-    min?: number
-    max?: number
-    width?: number
-  }) {
-    const [draft, setDraft] = useState<string>(() => String(value))
-    useEffect(() => { setDraft(String(value)) }, [value])
-    return (
-      <input
-        type="number"
-        value={draft}
-        step={step}
-        min={min}
-        max={max}
-        onChange={e => {
-          setDraft(e.target.value)
-          const n = parseFloat(e.target.value)
-          if (Number.isFinite(n)) onChange(n)
-        }}
-        onBlur={() => setDraft(String(value))}
-        style={{ width, padding: '2px 4px', textAlign: 'right' }}
-      />
-    )
   }
 
   return (
