@@ -478,12 +478,12 @@ const CATEGORY_LABELS: Record<AssetCategory, string> = {
 
 // 按类别的默认 Cap%（风控硬上限）
 const CATEGORY_CAP: Record<AssetCategory, number> = {
-  core: 18,
-  growth: 12,
-  satellite: 6,
-  cyclical: 8,
-  theme: 5,
-  winner: 15,
+  core: 20,
+  growth: 15,
+  satellite: 8,
+  cyclical: 10,
+  theme: 7,
+  winner: 20,
 }
 
 interface KellyRow {
@@ -655,7 +655,7 @@ function KellyTermsPanel() {
       </div>
       {open && (
         <div style={{ padding: '4px 12px 10px' }}>
-          {item('Cap 上限', '单标的风控硬上限百分比，按类别预设：核心18% / 成长12% / 卫星6% / 周期8% / 主题5% / 少数赢家15%。')}
+          {item('Cap 上限', '单标的风控硬上限百分比，按类别预设：核心20% / 成长15% / 卫星8% / 周期10% / 主题7% / 少数赢家20%。')}
           {item('R_up / R_down', '3 年视角的目标价上行 / 下跌幅度，例 R_up = 0.5 即涨 50%、R_down = -0.25 即跌 25%。')}
           {item('护城河 / 管理 / 估值', '0–5 分主观打分（支持一位小数），越高越好；分别衡量业务护城河、管理资本分配、当前估值位置。')}
           {item('评分 S', '= 护城河 + 管理 + 估值分位（0–15 分）。')}
