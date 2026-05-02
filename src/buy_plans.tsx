@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 
 /**
  * 第三批 · 模块二 — 加仓金字塔工具
@@ -653,11 +653,10 @@ interface KellyPositionTableProps {
   totalAssets: number
 }
 
-/* 受控 number input（顶层定义，避免在父组件内重复创建导致卸载/重载失焦）
-   设计：
-   - 保留 draft 字符串状态以支持输入中间态（如输入 "3." 、空串）
-   - onChange 只要能 parse 出有限数就立刻 commit，触发上层重算
-   - prop.value 变化时同步到 draft（在用户未交互时） */
+/* 受控 number input（顶层定义）
+   - draft 是输入框的真相。初始值从 prop value 填入。
+   - 每个 keystroke：同步更新 draft 并立即调 onChange，触发表格衡生列重算。
+   - 仅当 prop value 变动且与当前 draft 解析后的数值不一致时才被动同步，避免覆盖输入中间态。 */
 const NumInput = React.memo(function NumInput({ value, onChange, step = 1, min, max, width = 60 }: {
   value: number
   onChange: (v: number) => void
@@ -667,13 +666,13 @@ const NumInput = React.memo(function NumInput({ value, onChange, step = 1, min, 
   width?: number
 }) {
   const [draft, setDraft] = useState<string>(() => String(value))
-  const focusedRef = useRef(false)
+  // 仅在外部 prop value 与当前 draft 不一致时同步（处理重置 Cap 等场景）
   useEffect(() => {
-    // 仅在用户未聚焦本输入框时同步 prop 变更，避免覆盖输入中间态
-    if (!focusedRef.current && Number.isFinite(value)) {
-      const next = String(value)
-      setDraft(prev => (prev === next ? prev : next))
+    const parsed = parseFloat(draft)
+    if (!Number.isFinite(parsed) || parsed !== value) {
+      setDraft(String(value))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
   return (
     <input
@@ -682,22 +681,16 @@ const NumInput = React.memo(function NumInput({ value, onChange, step = 1, min, 
       step={step}
       min={min}
       max={max}
-      onFocus={() => { focusedRef.current = true }}
       onChange={e => {
-        setDraft(e.target.value)
-        const n = parseFloat(e.target.value)
+        const v = e.target.value
+        setDraft(v)
+        const n = parseFloat(v)
         if (Number.isFinite(n)) onChange(n)
       }}
       onBlur={() => {
-        focusedRef.current = false
         const n = parseFloat(draft)
-        if (!Number.isFinite(n)) {
-          setDraft(String(value))
-        } else {
-          // 提交最终值（以防 draft 与 prop 不同步）
-          if (n !== value) onChange(n)
-          setDraft(String(n))
-        }
+        if (!Number.isFinite(n)) setDraft(String(value))
+        else setDraft(String(n))
       }}
       style={{ width, padding: '2px 4px', textAlign: 'right' }}
     />
@@ -857,6 +850,8 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
             </tr>
           </thead>
           <tbody>
+            {/* 衡生列计算全部在 render 内联完成，不进入 state、不走 useEffect。
+                rows 变化 → KellyPositionTable 重渲染 → computeMetrics(r) 重跑。 */}
             {rows.map((r, i) => {
               const m = computeMetrics(r)
               const actualPct = totalAssets > 0 ? (r.currentValueCny / totalAssets * 100) : 0
