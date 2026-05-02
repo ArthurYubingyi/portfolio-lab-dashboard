@@ -486,6 +486,16 @@ const CATEGORY_CAP: Record<AssetCategory, number> = {
   winner: 20,
 }
 
+// 旧默认 Cap 值——用于识别未手动修改过的行，加载时自动迁移到新默认。
+const LEGACY_CATEGORY_CAPS: Record<AssetCategory, number[]> = {
+  core: [18],
+  growth: [12],
+  satellite: [6],
+  cyclical: [8],
+  theme: [5],
+  winner: [15],
+}
+
 interface KellyRow {
   symbol: string
   name: string
@@ -520,12 +530,20 @@ function defaultRowFields(): Omit<KellyRow, 'symbol' | 'name' | 'currentValueCny
 function migrateRow(raw: Record<string, unknown>): KellyRow {
   const def = defaultRowFields()
   const cat = (raw.category as AssetCategory) || def.category
+  // 自动升级：如果 cap 值与该类别的某个旧默认完全相等（即用户从未手动调过），自动迁移到新默认。
+  // 手动设过的值（如 11.3、14、任何不在旧默认列表的数字）不会被覆盖。
+  let cap = Number(raw.cap)
+  if (!Number.isFinite(cap) || cap === 0) {
+    cap = def.cap
+  } else if (LEGACY_CATEGORY_CAPS[cat]?.some(legacy => Math.abs(cap - legacy) < 0.001)) {
+    cap = CATEGORY_CAP[cat]
+  }
   return {
     symbol: String(raw.symbol || ''),
     name: String(raw.name || ''),
     currentValueCny: Number(raw.currentValueCny) || 0,
     category: cat,
-    cap: Number(raw.cap) || def.cap,
+    cap,
     rUp: Number(raw.rUp ?? def.rUp),
     rDown: Number(raw.rDown ?? def.rDown),
     moat: Number(raw.moat ?? def.moat),
@@ -721,6 +739,12 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
     setNewRow({ symbol: '', name: '' })
   }
 
+  // 重新应用类别默认 Cap：只重置 cap，其他字段不动
+  const resetCaps = () => {
+    if (!confirm('将所有行的 Cap 重置为当前类别默认值（核心 20% / 成长 15% / 卫星 8% / 周期 10% / 主题 7% / 少数赢家 20%）。其他字段保持不变。继续？')) return
+    setRows(prev => prev.map(r => ({ ...r, cap: CATEGORY_CAP[r.category] })))
+  }
+
   // 一键按类别填默认值（智能推断 + 重置 Cap）
   const fillDefaults = () => {
     if (!confirm('将根据股票名称智能推断类别并重置 Cap、护城河/管理/估值（=3）、R_up=40%、R_down=-25%、收缩m=10。继续？')) return
@@ -774,6 +798,7 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
       <div className="section-header">
         <h2>📐 凯利仓位速查表 · 专业版</h2>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button className="sm" onClick={resetCaps}>重新应用类别默认 Cap</button>
           <button className="sm" onClick={fillDefaults}>按类别一键填默认值</button>
         </div>
       </div>
