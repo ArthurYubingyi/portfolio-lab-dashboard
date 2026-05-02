@@ -635,6 +635,45 @@ interface KellyPositionTableProps {
   totalAssets: number
 }
 
+/* 术语解释面板（可折叠，默认展开） */
+function KellyTermsPanel() {
+  const [open, setOpen] = useState(true)
+  const item = (term: string, desc: string) => (
+    <div style={{ display: 'flex', gap: 8, padding: '4px 0', borderBottom: '1px dashed var(--border)', fontSize: '.78rem' }}>
+      <div style={{ minWidth: 130, fontWeight: 600 }}>{term}</div>
+      <div style={{ flex: 1, color: 'var(--fg2)' }}>{desc}</div>
+    </div>
+  )
+  return (
+    <div style={{ marginBottom: 10, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--bg2)' }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}
+      >
+        <strong style={{ fontSize: '.85rem' }}>📖 术语说明</strong>
+        <span style={{ color: 'var(--fg2)', fontSize: '.75rem' }}>{open ? '收起 ▲' : '展开 ▼'}</span>
+      </div>
+      {open && (
+        <div style={{ padding: '4px 12px 10px' }}>
+          {item('Cap 上限', '单标的风控硬上限百分比，按类别预设：核心18% / 成长12% / 卫星6% / 周期8% / 主题5% / 少数赢家15%。')}
+          {item('R_up / R_down', '3 年视角的目标价上行 / 下跌幅度，例 R_up = 0.5 即涨 50%、R_down = -0.25 即跌 25%。')}
+          {item('护城河 / 管理 / 估值', '0–5 分主观打分（支持一位小数），越高越好；分别衡量业务护城河、管理资本分配、当前估值位置。')}
+          {item('评分 S', '= 护城河 + 管理 + 估值分位（0–15 分）。')}
+          {item('p_base 基础胜率', '= min(0.75, 0.5 + 0.02×S)，由评分推导的原始胜率。')}
+          {item('p_adj 修正胜率', '贝叶斯收缩后的胜率 = (S·p_base + m·0.5)/(S+m)，向 0.5 靠拢以避免过度自信。')}
+          {item('赔率 b', '= R_up / |R_down|，赢亏比。')}
+          {item('p0 盈亏平衡', '= 1 / (1+b)，胜率需突破此值才有正期望。')}
+          {item('Edge 优势', '= b×p_adj − (1−p_adj)，期望收益 > 0 才值得投。')}
+          {item('凯利 f*', '理论最优仓位 = Edge / b（下限 0）。')}
+          {item('凯利折扣', '半凯利保守值 = f* × 0.5。')}
+          {item('建议仓位', '= min(凯利折扣, Cap)，同时被凯利与风控上限约束。')}
+          {item('结论', '按「建议 − 实际」的差距给出「已超过Cap / 接近上限 / 逢低加X% / 还有X%加仓 / 存疑观望」。')}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProps) {
   const hintsWithValue = useMemo(
     () => symbolHints.map(h => ({ ...h, valueCny: (h as { valueCny?: number }).valueCny || 0 })),
@@ -737,8 +776,9 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
           <button className="sm" onClick={fillDefaults}>按类别一键填默认值</button>
         </div>
       </div>
+      <KellyTermsPanel />
       <div style={{ fontSize: '.78rem', color: 'var(--fg2)', marginBottom: 10 }}>
-        Edge = b·p_adj − (1−p_adj) · f* = Edge/b · 分数凯利 = f*×0.5 · 建议仓位 = min(分数凯利, Cap)。
+        Edge = b·p_adj − (1−p_adj) · f* = Edge/b · 凯利折扣 = f*×0.5 · 建议仓位 = min(凯利折扣, Cap)。
         <strong>护城河/管理/估值改一下 → 评分S → p_base → p_adj → f* 立即重算。</strong>
       </div>
       <div className="table-wrap">
@@ -761,7 +801,7 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
               <th className="r">p0</th>
               <th className="r">Edge</th>
               <th className="r">f*</th>
-              <th className="r">分数凯利</th>
+              <th className="r">凯利折扣</th>
               <th className="r"><b>建议仓位%</b></th>
               <th className="r">实际仓位%</th>
               <th>结论</th>
@@ -819,22 +859,22 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
                       onChange={v => updateRow(i, 'rDown', v)} width={55} />
                   </td>
                   <td className="r">
-                    <NumInput value={r.moat} step={1} min={0} max={5}
-                      onChange={v => updateRow(i, 'moat', v)} width={45} />
+                    <NumInput value={r.moat} step={0.1} min={0} max={5}
+                      onChange={v => updateRow(i, 'moat', v)} width={50} />
                   </td>
                   <td className="r">
-                    <NumInput value={r.mgmt} step={1} min={0} max={5}
-                      onChange={v => updateRow(i, 'mgmt', v)} width={45} />
+                    <NumInput value={r.mgmt} step={0.1} min={0} max={5}
+                      onChange={v => updateRow(i, 'mgmt', v)} width={50} />
                   </td>
                   <td className="r">
-                    <NumInput value={r.valPct} step={1} min={0} max={5}
-                      onChange={v => updateRow(i, 'valPct', v)} width={45} />
+                    <NumInput value={r.valPct} step={0.1} min={0} max={5}
+                      onChange={v => updateRow(i, 'valPct', v)} width={50} />
                   </td>
                   <td className="r">
                     <NumInput value={r.shrinkM} step={1} min={1}
                       onChange={v => updateRow(i, 'shrinkM', v)} width={45} />
                   </td>
-                  <td className="r" style={{ color: 'var(--fg2)' }}>{m.S}</td>
+                  <td className="r" style={{ color: 'var(--fg2)' }}>{m.S.toFixed(1)}</td>
                   <td className="r" style={{ color: 'var(--fg2)' }}>{(m.pBase * 100).toFixed(1)}%</td>
                   <td className="r" style={{ color: 'var(--fg2)' }}>{(m.pAdj * 100).toFixed(1)}%</td>
                   <td className="r" style={{ color: 'var(--fg2)' }}>{m.b.toFixed(2)}</td>
