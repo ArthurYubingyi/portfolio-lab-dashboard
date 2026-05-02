@@ -631,7 +631,7 @@ function useKellyTable(symbolHints: { symbol: string; name: string; lastPrice: n
 /* 核心计算：每个 row 实时算出衍生量 */
 interface KellyMetrics {
   S: number           // 评分总分 0-15
-  pBase: number       // 0.5 + 0.02·S（封顶 0.75）
+  pBase: number       // 0.5 + 0.04·(S−7.5)（封顶 0.75、封底 0.30）
   pAdj: number        // 贝叶斯收缩
   b: number           // 赔率
   p0: number          // 盈亏平衡概率
@@ -643,7 +643,9 @@ interface KellyMetrics {
 
 function computeMetrics(r: KellyRow): KellyMetrics {
   const S = (r.moat || 0) + (r.mgmt || 0) + (r.valPct || 0)
-  const pBase = Math.min(0.75, 0.5 + 0.02 * S)
+  // p_base 以 S=7.5 为中性点（0.5），斜率0.04：S=10→60%、S=12.5→70%、S=5→40%、S=2.5→30%
+  // 封顶 0.75（避免过度乐观），封底 0.30（避免 p_base=0）
+  const pBase = Math.min(0.75, Math.max(0.30, 0.5 + 0.04 * (S - 7.5)))
   const m = 10  // 贝叶斯收缩参数，固定为 10
   const pAdj = (S * pBase + m * 0.5) / (S + m)
   const downAbs = Math.abs(r.rDown || 0)
@@ -731,7 +733,7 @@ function KellyTermsPanel() {
           {item('R_up / R_down', '3 年视角的目标价上行 / 下跌幅度，例 R_up = 0.5 即涨 50%、R_down = -0.25 即跌 25%。')}
           {item('护城河 / 管理 / 估值', '0–5 分主观打分（支持一位小数），越高越好；分别衡量业务护城河、管理资本分配、当前估值位置。')}
           {item('评分 S', '= 护城河 + 管理 + 估值分位（0–15 分）。')}
-          {item('p_base 基础胜率', '= min(0.75, 0.5 + 0.02×S)，由评分推导的原始胜率。')}
+          {item('p_base 基础胜率', '= min(0.75, max(0.30, 0.5 + 0.04×(S−7.5)))。以 S=7.5 为中性点（p_base=50%）：S=10→60%、S=12.5→70%、S=15→封顶 75%；S=5→40%、S=2.5→封底 30%。评分偏中性以下的标的会出现负 Edge，从而被识别为“不推荐仓位”。')}
           {item('p_adj 修正胜率', '贝叶斯收缩后的胜率 = (S·p_base + m·0.5)/(S+m)，向 0.5 靠拢以避免过度自信。')}
           {item('收缩参数 m（固定为 10）', '贝叶斯收缩参数，用于计算 p_adj 时让胜率向 0.5 靠拢，避免过度自信。值越大越保守。')}
           {item('赔率 b', '= R_up / |R_down|，赢亏比。')}
