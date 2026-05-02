@@ -476,6 +476,16 @@ const CATEGORY_LABELS: Record<AssetCategory, string> = {
   winner: '少数赢家',
 }
 
+// 表格中显示的短标签（仅中文，防止列过宽）
+const CATEGORY_LABELS_SHORT: Record<AssetCategory, string> = {
+  core: '核心',
+  growth: '成长',
+  satellite: '卫星',
+  cyclical: '周期',
+  theme: '主题',
+  winner: '赢家',
+}
+
 // 按类别的默认 Cap%（风控硬上限）
 const CATEGORY_CAP: Record<AssetCategory, number> = {
   core: 20,
@@ -874,16 +884,17 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
               }
               return (
                 <tr key={r.symbol}>
-                  <td style={{ minWidth: 110 }}>
-                    <div><b>{r.symbol}</b></div>
-                    <div style={{ fontSize: '.7rem', color: 'var(--fg2)' }}>{r.name}</div>
+                  <td style={{ width: 80, maxWidth: 80 }} title={`${r.symbol} · ${r.name}`}>
+                    <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.symbol}</div>
+                    <div style={{ fontSize: '.68rem', color: 'var(--fg2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
                   </td>
-                  <td>
+                  <td style={{ width: 64 }}>
                     <select value={r.category}
                       onChange={e => updateRow(i, 'category', e.target.value as AssetCategory)}
-                      style={{ fontSize: '.75rem', padding: '2px 4px' }}>
+                      title={CATEGORY_LABELS[r.category]}
+                      style={{ fontSize: '.75rem', padding: '2px 4px', width: 60 }}>
                       {(Object.keys(CATEGORY_LABELS) as AssetCategory[]).map(k =>
-                        <option key={k} value={k}>{CATEGORY_LABELS[k]}</option>)}
+                        <option key={k} value={k}>{CATEGORY_LABELS_SHORT[k]}</option>)}
                     </select>
                   </td>
                   <td className="r">
