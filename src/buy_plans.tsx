@@ -728,8 +728,7 @@ function KellyTermsPanel() {
           {item('p0 盈亏平衡', '= 1 / (1+b)，胜率需突破此值才有正期望。')}
           {item('Edge 优势', '= b×p_adj − (1−p_adj)，期望收益 > 0 才值得投。')}
           {item('凯利 f*', '理论最优仓位 = Edge / b（下限 0）。')}
-          {item('凯利折扣', '半凯利保守值 = f* × 0.5。')}
-          {item('建议仓位', '= min(凯利折扣, Cap)，同时被凯利与风控上限约束。')}
+          {item('建议仓位', '= min(凯利 f* × 0.5, Cap 上限)。即将理论最优仓位 f* 乘以 0.5（半凯利保守值），再受 Cap 上限约束。')}
           {item('结论', '按「建议 − 实际」的差距给出「已超过Cap / 接近上限 / 逢低加X% / 还有X%加仓 / 存疑观望」。')}
         </div>
       )}
@@ -819,7 +818,7 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
       </div>
       <KellyTermsPanel />
       <div style={{ fontSize: '.78rem', color: 'var(--fg2)', marginBottom: 10 }}>
-        Edge = b·p_adj − (1−p_adj) · f* = Edge/b · 凯利折扣 = f*×0.5 · 建议仓位 = min(凯利折扣, Cap)。
+        Edge = b·p_adj − (1−p_adj) · f* = Edge/b · 建议仓位 = min(f*×0.5, Cap)。
         <strong>护城河/管理/估值改一下 → 评分S → p_base → p_adj → f* 立即重算。</strong>
       </div>
       <div className="table-wrap">
@@ -841,7 +840,6 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
               <th className="r">p0</th>
               <th className="r">Edge</th>
               <th className="r">f*</th>
-              <th className="r">凯利折扣</th>
               <th className="r"><b>建议仓位%</b></th>
               <th className="r">实际仓位%</th>
               <th>结论</th>
@@ -921,7 +919,6 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
                     {(m.edge * 100).toFixed(1)}%
                   </td>
                   <td className="r" style={{ color: 'var(--fg2)' }}>{(m.fStar * 100).toFixed(1)}%</td>
-                  <td className="r" style={{ color: 'var(--fg2)' }}>{(m.fHalf * 100).toFixed(1)}%</td>
                   <td className="r" style={{ fontWeight: 600 }}>{m.recPct.toFixed(1)}%</td>
                   <td className="r">{actualPct.toFixed(1)}%</td>
                   <td style={{ color, fontWeight: 600, whiteSpace: 'nowrap' }}>{conclusion}</td>
@@ -936,7 +933,7 @@ function KellyPositionTable({ symbolHints, totalAssets }: KellyPositionTableProp
               )
             })}
             {rows.length === 0 && (
-              <tr><td colSpan={21} style={{ textAlign: 'center', padding: 16, color: 'var(--fg2)' }}>暂无数据，添加股票开始</td></tr>
+              <tr><td colSpan={20} style={{ textAlign: 'center', padding: 16, color: 'var(--fg2)' }}>暂无数据，添加股票开始</td></tr>
             )}
           </tbody>
         </table>
