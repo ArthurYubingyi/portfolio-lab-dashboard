@@ -1,16 +1,42 @@
 {
   "symbol": "GOOG",
-  "name": "Alphabet",
-  "market": "US",
-  "lastUpdate": "2026-05-01",
-  "current": { "pe": 24.5, "pb": 6.2, "ps": 6.5, "dividendYield": 0.005, "peg": 1.5 },
+  "lastUpdate": "2026-05-04",
+  "current": {
+    "pe": 29.23,
+    "pb": 11.16,
+    "ps": 10.97,
+    "dividendYield": 0.23,
+    "peg": 1.78
+  },
   "history5y": {
-    "pe": { "min": 18.0, "max": 32.0, "median": 24.0, "currentPercentile": 55.0 },
-    "pb": { "min": 4.5, "max": 7.5, "median": 6.0, "currentPercentile": 58.0 }
+    "pe": {
+      "min": 17.54,
+      "max": 43.85,
+      "median": 29.23,
+      "currentPercentile": 50.0
+    },
+    "pb": {
+      "min": 6.69,
+      "max": 15.62,
+      "median": 11.16,
+      "currentPercentile": 50.0
+    }
   },
   "history10y": {
-    "pe": { "min": 18.0, "max": 38.0, "median": 26.0, "currentPercentile": 38.0 },
-    "pb": { "min": 3.2, "max": 7.5, "median": 5.0, "currentPercentile": 65.0 }
+    "pe": {
+      "min": 17.54,
+      "max": 43.85,
+      "median": 29.23,
+      "currentPercentile": 50.0
+    },
+    "pb": {
+      "min": 6.69,
+      "max": 15.62,
+      "median": 11.16,
+      "currentPercentile": 50.0
+    }
   },
-  "source": "seed"
+  "source": "yfinance",
+  "name": "Alphabet",
+  "market": "US"
 }

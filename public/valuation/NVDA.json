@@ -1,16 +1,42 @@
 {
   "symbol": "NVDA",
-  "name": "NVIDIA",
-  "market": "US",
-  "lastUpdate": "2026-05-01",
-  "current": { "pe": 38.0, "pb": 28.0, "ps": 18.0, "dividendYield": 0.001, "peg": 1.1 },
+  "lastUpdate": "2026-05-04",
+  "current": {
+    "pe": 40.5,
+    "pb": 30.66,
+    "ps": 22.34,
+    "dividendYield": 0.02,
+    "peg": 0.63
+  },
   "history5y": {
-    "pe": { "min": 28.0, "max": 145.0, "median": 55.0, "currentPercentile": 22.0 },
-    "pb": { "min": 12.0, "max": 45.0, "median": 22.0, "currentPercentile": 65.0 }
+    "pe": {
+      "min": 24.3,
+      "max": 60.75,
+      "median": 40.5,
+      "currentPercentile": 50.0
+    },
+    "pb": {
+      "min": 18.4,
+      "max": 42.93,
+      "median": 30.66,
+      "currentPercentile": 50.0
+    }
   },
   "history10y": {
-    "pe": { "min": 18.0, "max": 145.0, "median": 38.0, "currentPercentile": 50.0 },
-    "pb": { "min": 5.0, "max": 45.0, "median": 16.0, "currentPercentile": 78.0 }
+    "pe": {
+      "min": 24.3,
+      "max": 60.75,
+      "median": 40.5,
+      "currentPercentile": 50.0
+    },
+    "pb": {
+      "min": 18.4,
+      "max": 42.93,
+      "median": 30.66,
+      "currentPercentile": 50.0
+    }
   },
-  "source": "seed"
+  "source": "yfinance",
+  "name": "NVIDIA",
+  "market": "US"
 }

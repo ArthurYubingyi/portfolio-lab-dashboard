@@ -1,16 +1,42 @@
 {
   "symbol": "META",
-  "name": "Meta",
-  "market": "US",
-  "lastUpdate": "2026-05-01",
-  "current": { "pe": 25.0, "pb": 6.5, "ps": 8.0, "dividendYield": 0.005, "peg": 1.4 },
+  "lastUpdate": "2026-05-04",
+  "current": {
+    "pe": 22.12,
+    "pb": 7.09,
+    "ps": 7.19,
+    "dividendYield": 0.34,
+    "peg": 0.93
+  },
   "history5y": {
-    "pe": { "min": 11.0, "max": 35.0, "median": 22.0, "currentPercentile": 60.0 },
-    "pb": { "min": 3.5, "max": 8.5, "median": 5.5, "currentPercentile": 68.0 }
+    "pe": {
+      "min": 13.27,
+      "max": 33.18,
+      "median": 22.12,
+      "currentPercentile": 50.0
+    },
+    "pb": {
+      "min": 4.25,
+      "max": 9.93,
+      "median": 7.09,
+      "currentPercentile": 50.0
+    }
   },
   "history10y": {
-    "pe": { "min": 11.0, "max": 80.0, "median": 28.0, "currentPercentile": 38.0 },
-    "pb": { "min": 3.5, "max": 12.0, "median": 6.0, "currentPercentile": 55.0 }
+    "pe": {
+      "min": 13.27,
+      "max": 33.18,
+      "median": 22.12,
+      "currentPercentile": 50.0
+    },
+    "pb": {
+      "min": 4.25,
+      "max": 9.93,
+      "median": 7.09,
+      "currentPercentile": 50.0
+    }
   },
-  "source": "seed"
+  "source": "yfinance",
+  "name": "Meta",
+  "market": "US"
 }

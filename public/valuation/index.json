@@ -1,21 +1,47 @@
 {
-  "updated": "2026-05-01",
-  "note": "初始种子数据，等待 valuation-fetch.yml 首次运行后会被自动覆盖。百分位为基于 stockanalysis.com / wisesheets / 雪球公开历史区间的估算值，仅供 PortfolioLab 决策辅助参考。",
+  "updated": "2026-05-04",
   "list": [
-    {"symbol": "600519.SH", "name": "贵州茅台", "market": "A", "lastUpdate": "2026-05-01"},
-    {"symbol": "600036.SH", "name": "招商银行", "market": "A", "lastUpdate": "2026-05-01"},
-    {"symbol": "300750.SZ", "name": "宁德时代", "market": "A", "lastUpdate": "2026-05-01"},
-    {"symbol": "000858.SZ", "name": "五粮液", "market": "A", "lastUpdate": "2026-05-01"},
-    {"symbol": "00700.HK", "name": "腾讯控股", "market": "HK", "lastUpdate": "2026-05-01"},
-    {"symbol": "09988.HK", "name": "阿里巴巴-W", "market": "HK", "lastUpdate": "2026-05-01"},
-    {"symbol": "01024.HK", "name": "快手-W", "market": "HK", "lastUpdate": "2026-05-01"},
-    {"symbol": "03690.HK", "name": "美团-W", "market": "HK", "lastUpdate": "2026-05-01"},
-    {"symbol": "GOOG", "name": "Alphabet", "market": "US", "lastUpdate": "2026-05-01"},
-    {"symbol": "TSLA", "name": "Tesla", "market": "US", "lastUpdate": "2026-05-01"},
-    {"symbol": "NVDA", "name": "NVIDIA", "market": "US", "lastUpdate": "2026-05-01"},
-    {"symbol": "AAPL", "name": "Apple", "market": "US", "lastUpdate": "2026-05-01"},
-    {"symbol": "META", "name": "Meta", "market": "US", "lastUpdate": "2026-05-01"},
-    {"symbol": "MSFT", "name": "Microsoft", "market": "US", "lastUpdate": "2026-05-01"},
-    {"symbol": "AMZN", "name": "Amazon", "market": "US", "lastUpdate": "2026-05-01"}
+    {
+      "symbol": "GOOG",
+      "name": "Alphabet",
+      "market": "US",
+      "lastUpdate": "2026-05-04"
+    },
+    {
+      "symbol": "TSLA",
+      "name": "Tesla",
+      "market": "US",
+      "lastUpdate": "2026-05-04"
+    },
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA",
+      "market": "US",
+      "lastUpdate": "2026-05-04"
+    },
+    {
+      "symbol": "AAPL",
+      "name": "Apple",
+      "market": "US",
+      "lastUpdate": "2026-05-04"
+    },
+    {
+      "symbol": "META",
+      "name": "Meta",
+      "market": "US",
+      "lastUpdate": "2026-05-04"
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft",
+      "market": "US",
+      "lastUpdate": "2026-05-04"
+    },
+    {
+      "symbol": "AMZN",
+      "name": "Amazon",
+      "market": "US",
+      "lastUpdate": "2026-05-04"
+    }
   ]
 }

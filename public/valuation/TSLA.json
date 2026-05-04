@@ -1,16 +1,42 @@
 {
   "symbol": "TSLA",
-  "name": "Tesla",
-  "market": "US",
-  "lastUpdate": "2026-05-01",
-  "current": { "pe": 65.0, "pb": 11.5, "ps": 8.5, "dividendYield": 0.0, "peg": 3.5 },
+  "lastUpdate": "2026-05-04",
+  "current": {
+    "pe": 358.55,
+    "pb": 17.85,
+    "ps": 15.0,
+    "dividendYield": null,
+    "peg": 5.38
+  },
   "history5y": {
-    "pe": { "min": 30.0, "max": 320.0, "median": 75.0, "currentPercentile": 45.0 },
-    "pb": { "min": 8.0, "max": 35.0, "median": 14.0, "currentPercentile": 38.0 }
+    "pe": {
+      "min": 215.13,
+      "max": 537.83,
+      "median": 358.55,
+      "currentPercentile": 50.0
+    },
+    "pb": {
+      "min": 10.71,
+      "max": 24.99,
+      "median": 17.85,
+      "currentPercentile": 50.0
+    }
   },
   "history10y": {
-    "pe": { "min": 30.0, "max": 1100.0, "median": 95.0, "currentPercentile": 35.0 },
-    "pb": { "min": 8.0, "max": 35.0, "median": 14.0, "currentPercentile": 38.0 }
+    "pe": {
+      "min": 215.13,
+      "max": 537.83,
+      "median": 358.55,
+      "currentPercentile": 50.0
+    },
+    "pb": {
+      "min": 10.71,
+      "max": 24.99,
+      "median": 17.85,
+      "currentPercentile": 50.0
+    }
   },
-  "source": "seed"
+  "source": "yfinance",
+  "name": "Tesla",
+  "market": "US"
 }
