@@ -1,27 +1,6 @@
 {
   "symbol": "09988.HK",
-  "lastUpdate": "2026-05-01",
-  "history": [
-    {
-      "exDividendDate": "2025-06-12",
-      "paymentDate": "2025-07-10",
-      "amount": 0.95,
-      "currency": "USD"
-    },
-    {
-      "exDividendDate": "2024-06-13",
-      "paymentDate": "2024-07-15",
-      "amount": 1.0,
-      "currency": "USD"
-    }
-  ],
-  "upcoming": [
-    {
-      "exDividendDate": "2026-06-12",
-      "paymentDate": null,
-      "amount": null,
-      "estimated": true,
-      "currency": "USD"
-    }
-  ]
+  "lastUpdate": "2026-05-04",
+  "history": [],
+  "upcoming": []
 }

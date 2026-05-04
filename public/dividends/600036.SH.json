@@ -1,33 +1,163 @@
 {
   "symbol": "600036.SH",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "history": [
     {
-      "exDividendDate": "2025-07-10",
-      "paymentDate": "2025-07-11",
-      "amount": 2.0,
+      "exDividendDate": "2026-01-16",
+      "paymentDate": "2026-01-16",
+      "amount": null,
       "currency": "CNY"
     },
     {
-      "exDividendDate": "2024-07-10",
+      "exDividendDate": "2025-07-11",
+      "paymentDate": "2025-07-11",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2024-07-11",
       "paymentDate": "2024-07-11",
-      "amount": 1.972,
+      "amount": null,
       "currency": "CNY"
     },
     {
       "exDividendDate": "2023-07-13",
-      "paymentDate": "2023-07-14",
-      "amount": 1.738,
+      "paymentDate": "2023-07-13",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2022-07-15",
+      "paymentDate": "2022-07-15",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2021-07-13",
+      "paymentDate": "2021-07-13",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2020-07-10",
+      "paymentDate": "2020-07-10",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2019-07-12",
+      "paymentDate": "2019-07-12",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2018-07-12",
+      "paymentDate": "2018-07-12",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2017-06-14",
+      "paymentDate": "2017-06-14",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2016-07-13",
+      "paymentDate": "2016-07-13",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2015-07-03",
+      "paymentDate": "2015-07-03",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2014-07-11",
+      "paymentDate": "2014-07-11",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2013-06-13",
+      "paymentDate": "2013-06-19",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2012-06-07",
+      "paymentDate": "2012-06-13",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2011-06-10",
+      "paymentDate": "2011-06-16",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2010-07-01",
+      "paymentDate": "2010-07-08",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2009-07-03",
+      "paymentDate": "2009-07-09",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2008-07-28",
+      "paymentDate": "2008-08-01",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2007-07-04",
+      "paymentDate": "2007-07-10",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2006-09-21",
+      "paymentDate": "2006-09-27",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2006-06-16",
+      "paymentDate": "2006-06-21",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2006-02-24",
+      "paymentDate": "NaT",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2005-06-20",
+      "paymentDate": "2005-06-24",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2004-05-11",
+      "paymentDate": "2004-05-17",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2003-07-16",
+      "paymentDate": "2003-07-23",
+      "amount": null,
       "currency": "CNY"
     }
   ],
-  "upcoming": [
-    {
-      "exDividendDate": "2026-07-10",
-      "paymentDate": null,
-      "amount": null,
-      "estimated": true,
-      "currency": "CNY"
-    }
-  ]
+  "upcoming": []
 }

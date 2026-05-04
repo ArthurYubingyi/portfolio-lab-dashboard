@@ -1,27 +1,169 @@
 {
   "symbol": "000858.SZ",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "history": [
     {
-      "exDividendDate": "2025-06-20",
-      "paymentDate": "2025-06-23",
-      "amount": 4.678,
+      "exDividendDate": "2025-12-18",
+      "paymentDate": "2025-12-18",
+      "amount": null,
       "currency": "CNY"
     },
     {
-      "exDividendDate": "2024-06-21",
-      "paymentDate": "2024-06-24",
-      "amount": 4.678,
+      "exDividendDate": "2025-07-18",
+      "paymentDate": "2025-07-18",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2025-01-23",
+      "paymentDate": "2025-01-23",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2024-07-12",
+      "paymentDate": "2024-07-12",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2023-06-27",
+      "paymentDate": "2023-06-27",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2022-06-29",
+      "paymentDate": "2022-06-29",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2021-07-09",
+      "paymentDate": "2021-07-09",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2020-06-22",
+      "paymentDate": "2020-06-22",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2019-06-06",
+      "paymentDate": "2019-06-06",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2018-07-06",
+      "paymentDate": "2018-07-06",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2017-05-12",
+      "paymentDate": "2017-05-12",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2016-07-25",
+      "paymentDate": "2016-07-25",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2015-06-19",
+      "paymentDate": "2015-06-19",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2014-07-01",
+      "paymentDate": "2014-07-01",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2013-06-07",
+      "paymentDate": "2013-06-07",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2012-05-16",
+      "paymentDate": "2012-05-16",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2011-05-13",
+      "paymentDate": "2011-05-13",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2010-05-14",
+      "paymentDate": "2010-05-14",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2009-05-11",
+      "paymentDate": "2009-05-11",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2007-05-08",
+      "paymentDate": "2007-05-08",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2006-06-12",
+      "paymentDate": "2006-06-12",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2004-04-13",
+      "paymentDate": "2004-04-13",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2003-04-16",
+      "paymentDate": "NaT",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2002-04-18",
+      "paymentDate": "2002-04-18",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2001-09-04",
+      "paymentDate": "NaT",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "1999-09-28",
+      "paymentDate": "NaT",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "1999-06-08",
+      "paymentDate": "1999-06-14",
+      "amount": null,
       "currency": "CNY"
     }
   ],
-  "upcoming": [
-    {
-      "exDividendDate": "2026-06-20",
-      "paymentDate": null,
-      "amount": null,
-      "estimated": true,
-      "currency": "CNY"
-    }
-  ]
+  "upcoming": []
 }

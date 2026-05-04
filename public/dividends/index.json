@@ -1,93 +1,93 @@
 {
-  "updatedAt": "2026-05-01",
+  "updatedAt": "2026-05-04T06:36:11.256866Z",
   "list": [
     {
       "symbol": "600519.SH",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 3,
-      "upcomingCount": 1
+      "lastUpdate": "2026-05-04",
+      "historyCount": 30,
+      "upcomingCount": 0
     },
     {
       "symbol": "600036.SH",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 3,
-      "upcomingCount": 1
+      "lastUpdate": "2026-05-04",
+      "historyCount": 26,
+      "upcomingCount": 0
     },
     {
       "symbol": "300750.SZ",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 2,
+      "lastUpdate": "2026-05-04",
+      "historyCount": 12,
       "upcomingCount": 0
     },
     {
       "symbol": "000858.SZ",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 2,
-      "upcomingCount": 1
+      "lastUpdate": "2026-05-04",
+      "historyCount": 27,
+      "upcomingCount": 0
     },
     {
       "symbol": "00700.HK",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 3,
-      "upcomingCount": 1
+      "lastUpdate": "2026-05-04",
+      "historyCount": 0,
+      "upcomingCount": 0
     },
     {
       "symbol": "09988.HK",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 2,
-      "upcomingCount": 1
+      "lastUpdate": "2026-05-04",
+      "historyCount": 0,
+      "upcomingCount": 0
     },
     {
       "symbol": "01024.HK",
-      "lastUpdate": "2026-05-01",
+      "lastUpdate": "2026-05-04",
       "historyCount": 0,
       "upcomingCount": 0
     },
     {
       "symbol": "03690.HK",
-      "lastUpdate": "2026-05-01",
+      "lastUpdate": "2026-05-04",
       "historyCount": 0,
+      "upcomingCount": 0
+    },
+    {
+      "symbol": "GOOG",
+      "lastUpdate": "2026-05-04",
+      "historyCount": 8,
+      "upcomingCount": 1
+    },
+    {
+      "symbol": "TSLA",
+      "lastUpdate": "2026-05-04",
+      "historyCount": 0,
+      "upcomingCount": 0
+    },
+    {
+      "symbol": "NVDA",
+      "lastUpdate": "2026-05-04",
+      "historyCount": 30,
       "upcomingCount": 0
     },
     {
       "symbol": "AAPL",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 4,
-      "upcomingCount": 1
-    },
-    {
-      "symbol": "MSFT",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 4,
-      "upcomingCount": 1
-    },
-    {
-      "symbol": "GOOG",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 4,
+      "lastUpdate": "2026-05-04",
+      "historyCount": 30,
       "upcomingCount": 1
     },
     {
       "symbol": "META",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 4,
-      "upcomingCount": 1
+      "lastUpdate": "2026-05-04",
+      "historyCount": 9,
+      "upcomingCount": 0
     },
     {
-      "symbol": "NVDA",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 2,
+      "symbol": "MSFT",
+      "lastUpdate": "2026-05-04",
+      "historyCount": 30,
       "upcomingCount": 1
     },
     {
       "symbol": "AMZN",
-      "lastUpdate": "2026-05-01",
-      "historyCount": 0,
-      "upcomingCount": 0
-    },
-    {
-      "symbol": "TSLA",
-      "lastUpdate": "2026-05-01",
+      "lastUpdate": "2026-05-04",
       "historyCount": 0,
       "upcomingCount": 0
     }

@@ -1,17 +1,77 @@
 {
   "symbol": "300750.SZ",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "history": [
     {
-      "exDividendDate": "2025-06-12",
-      "paymentDate": "2025-06-13",
-      "amount": 5.022,
+      "exDividendDate": "2026-04-22",
+      "paymentDate": "2026-04-22",
+      "amount": null,
       "currency": "CNY"
     },
     {
-      "exDividendDate": "2024-05-22",
-      "paymentDate": "2024-05-23",
-      "amount": 2.452,
+      "exDividendDate": "2026-04-22",
+      "paymentDate": "2026-04-22",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2025-08-20",
+      "paymentDate": "2025-08-20",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2025-04-22",
+      "paymentDate": "2025-04-22",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2025-01-24",
+      "paymentDate": "2025-01-24",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2024-04-30",
+      "paymentDate": "2024-04-30",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2024-04-30",
+      "paymentDate": "2024-04-30",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2023-04-26",
+      "paymentDate": "2023-04-26",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2022-09-28",
+      "paymentDate": "2022-09-28",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2021-07-05",
+      "paymentDate": "2021-07-05",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2020-06-04",
+      "paymentDate": "2020-06-04",
+      "amount": null,
+      "currency": "CNY"
+    },
+    {
+      "exDividendDate": "2019-07-22",
+      "paymentDate": "2019-07-22",
+      "amount": null,
       "currency": "CNY"
     }
   ],

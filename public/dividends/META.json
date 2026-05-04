@@ -1,39 +1,61 @@
 {
   "symbol": "META",
-  "lastUpdate": "2026-05-01",
+  "lastUpdate": "2026-05-04",
   "history": [
     {
-      "exDividendDate": "2026-03-19",
-      "paymentDate": "2026-03-26",
+      "exDividendDate": "2026-03-16",
+      "paymentDate": null,
       "amount": 0.525,
       "currency": "USD"
     },
     {
-      "exDividendDate": "2025-12-19",
-      "paymentDate": "2025-12-26",
+      "exDividendDate": "2025-12-15",
+      "paymentDate": null,
       "amount": 0.525,
       "currency": "USD"
     },
     {
-      "exDividendDate": "2025-09-19",
-      "paymentDate": "2025-09-26",
+      "exDividendDate": "2025-09-22",
+      "paymentDate": null,
       "amount": 0.525,
       "currency": "USD"
     },
     {
-      "exDividendDate": "2025-06-20",
-      "paymentDate": "2025-06-27",
+      "exDividendDate": "2025-06-16",
+      "paymentDate": null,
+      "amount": 0.525,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2025-03-14",
+      "paymentDate": null,
+      "amount": 0.525,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2024-12-16",
+      "paymentDate": null,
+      "amount": 0.5,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2024-09-16",
+      "paymentDate": null,
+      "amount": 0.5,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2024-06-14",
+      "paymentDate": null,
+      "amount": 0.5,
+      "currency": "USD"
+    },
+    {
+      "exDividendDate": "2024-02-21",
+      "paymentDate": null,
       "amount": 0.5,
       "currency": "USD"
     }
   ],
-  "upcoming": [
-    {
-      "exDividendDate": "2026-06-19",
-      "paymentDate": "2026-06-26",
-      "amount": 0.525,
-      "estimated": true,
-      "currency": "USD"
-    }
-  ]
+  "upcoming": []
 }
