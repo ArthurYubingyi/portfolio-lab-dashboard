@@ -544,6 +544,7 @@ export default function App() {
   const [showCashFlow, setShowCashFlow] = useState(false)
   const [editingPosition, setEditingPosition] = useState<Position | null>(null)
   const [editDeltaQty, setEditDeltaQty] = useState('')
+  const [editDealPrice, setEditDealPrice] = useState('')
 
   // Chart range
   const [chartRange, setChartRange] = useState<'all' | '30d' | '90d'>('all')
@@ -850,12 +851,21 @@ export default function App() {
   const handleDeltaQty = () => {
     if (!editingPosition) return
     const delta = parseFloat(editDeltaQty)
-    if (isNaN(delta) || delta === 0) { showToast('请输入有效数字'); return }
+    if (isNaN(delta) || delta === 0) { showToast('请输入有效数量'); return }
+    const price = parseFloat(editDealPrice)
+    if (isNaN(price) || price <= 0) { showToast('请输入有效成交价格'); return }
     const target = editingPosition
     const newQty = Math.max(0, target.qty + delta)
     const direction: Decision['direction'] = newQty === 0 ? 'close' : (delta > 0 ? 'add' : 'reduce')
+    // 资金变动 (CNY)：买入减现金、卖出增现金；按计价货币换算成 CNY
+    const fxRate = target.currency === 'USD' ? state.usdcny
+                 : target.currency === 'HKD' ? state.hkdcny
+                 : 1
+    const tradeAmountCny = Math.abs(delta) * price * fxRate
+    const cashDelta = delta > 0 ? -tradeAmountCny : tradeAmountCny
     setEditingPosition(null)
     setEditDeltaQty('')
+    setEditDealPrice('')
     setPendingDecision({
       symbol: target.symbol,
       symbolName: target.name,
@@ -865,11 +875,16 @@ export default function App() {
           ...s,
           positions: s.positions.map(p =>
             p.id === target.id
-              ? { ...p, qty: newQty, lastUpdated: today() }
+              ? { ...p, qty: newQty, lastPrice: price, lastUpdated: today() }
               : p
-          )
+          ),
+          cashFixed: Math.max(0, s.cashFixed + cashDelta),
         }))
-        showToast(delta >= 0 ? `决策已记录，增持 ${delta} 股` : `决策已记录，减持 ${Math.abs(delta)} 股`)
+        const action = delta >= 0 ? `增持 ${delta} 股` : `减持 ${Math.abs(delta)} 股`
+        const cashMsg = cashDelta >= 0
+          ? `现金 +¥${fmtInt(cashDelta)}`
+          : `现金 -¥${fmtInt(Math.abs(cashDelta))}`
+        showToast(`决策已记录，${action}，${cashMsg}`)
       }
     })
   }
@@ -1163,7 +1178,7 @@ export default function App() {
             <td style={{ fontSize: '.75rem', color: 'var(--fg2)' }}>{p.lastUpdated || '--'}</td>
             <td>
               <div style={{ display: 'flex', gap: 4 }}>
-                <button className="sm" onClick={() => { setEditingPosition(p); setEditDeltaQty('') }}>调仓</button>
+                <button className="sm" onClick={() => { setEditingPosition(p); setEditDeltaQty(''); setEditDealPrice(p.lastPrice > 0 ? p.lastPrice.toString() : '') }}>调仓</button>
                 <button className="sm" onClick={() => {
                   const cur = p.targetBuyPrice ? p.targetBuyPrice.toString() : ''
                   const buyStr = window.prompt(`设置 ${p.symbol} 买入提醒价（现价 ≤ 该价提示买入，留空取消）：`, cur)
@@ -2025,29 +2040,57 @@ export default function App() {
       )}
 
       {/* Delta Qty Dialog */}
-      {editingPosition && (
-        <div className="dialog-overlay" onClick={() => setEditingPosition(null)}>
+      {editingPosition && (() => {
+        const delta = parseFloat(editDeltaQty)
+        const price = parseFloat(editDealPrice)
+        const validDelta = !isNaN(delta) && delta !== 0
+        const validPrice = !isNaN(price) && price > 0
+        const fxRate = editingPosition.currency === 'USD' ? state.usdcny
+                     : editingPosition.currency === 'HKD' ? state.hkdcny
+                     : 1
+        const tradeAmountCny = validDelta && validPrice ? Math.abs(delta) * price * fxRate : 0
+        const cashDelta = validDelta && validPrice ? (delta > 0 ? -tradeAmountCny : tradeAmountCny) : 0
+        const closeOrCancel = () => { setEditingPosition(null); setEditDeltaQty(''); setEditDealPrice('') }
+        return (
+        <div className="dialog-overlay" onClick={closeOrCancel}>
           <div className="dialog" onClick={e => e.stopPropagation()}>
             <h3>调仓 - {editingPosition.name} ({editingPosition.symbol})</h3>
             <p style={{ fontSize: '.85rem', color: 'var(--fg2)', marginBottom: 12 }}>
-              当前持仓: {fmtInt(editingPosition.qty)} 股
+              当前持仓: {fmtInt(editingPosition.qty)} 股 · 计价货币: {editingPosition.currency}
+              {editingPosition.currency !== 'CNY' && (
+                <> · 汇率: {fxRate.toFixed(4)}</>
+              )}
             </p>
             <div className="field">
               <label>调整数量（正数增持，负数减持）</label>
               <input type="number" value={editDeltaQty} onChange={e => setEditDeltaQty(e.target.value)} placeholder="如 +500 或 -200" />
             </div>
-            {editDeltaQty && !isNaN(parseFloat(editDeltaQty)) && (
-              <p style={{ fontSize: '.82rem', color: 'var(--fg2)' }}>
-                调整后: {fmtInt(Math.max(0, editingPosition.qty + parseFloat(editDeltaQty)))} 股
+            <div className="field">
+              <label>成交价格（{editingPosition.currency}，必填）</label>
+              <input type="number" step="0.01" min="0" value={editDealPrice} onChange={e => setEditDealPrice(e.target.value)}
+                placeholder={editingPosition.lastPrice > 0 ? `参考最新价 ${editingPosition.lastPrice}` : '请输入成交价格'} />
+            </div>
+            {validDelta && (
+              <p style={{ fontSize: '.82rem', color: 'var(--fg2)', margin: '4px 0' }}>
+                调整后持仓: {fmtInt(Math.max(0, editingPosition.qty + delta))} 股
+              </p>
+            )}
+            {validDelta && validPrice && (
+              <p style={{ fontSize: '.82rem', color: cashDelta >= 0 ? 'var(--green)' : 'var(--red)', margin: '4px 0' }}>
+                成交金额: {Math.abs(delta).toLocaleString()} × {price} {editingPosition.currency}
+                {editingPosition.currency !== 'CNY' && <> × {fxRate.toFixed(4)}</>}
+                {' = '}¥{fmtInt(tradeAmountCny)}
+                {' → '}现金 {cashDelta >= 0 ? '+' : '-'}¥{fmtInt(Math.abs(cashDelta))}
               </p>
             )}
             <div className="actions">
-              <button onClick={() => setEditingPosition(null)}>取消</button>
-              <button className="primary" onClick={handleDeltaQty}>确认调仓</button>
+              <button onClick={closeOrCancel}>取消</button>
+              <button className="primary" onClick={handleDeltaQty} disabled={!validDelta || !validPrice}>确认调仓</button>
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* Add Option Dialog */}
       {showAddOption && (
