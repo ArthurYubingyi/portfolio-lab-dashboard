@@ -83,7 +83,7 @@ const INITIAL_SHARES = 10000
 const INITIAL_NAV = 11000.0
 
 /* ────────── 静态资产默认值 (CNY) ────────── */
-const DEFAULT_CASH_FIXED = 48_000_000   // 现金固收 4800万
+const DEFAULT_CASH_FIXED = 33_798_828   // 现金固收
 const DEFAULT_PHYSICAL_GOLD = 1_080_000  // 实物黄金 108万
 const DEFAULT_OFFMARKET_FUND = 3_200_000 // 场外股票基金 320万
 
