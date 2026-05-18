@@ -1,47 +1,47 @@
 {
-  "updated": "2026-05-11",
+  "updated": "2026-05-18",
   "list": [
     {
       "symbol": "GOOG",
       "name": "Alphabet",
       "market": "US",
-      "lastUpdate": "2026-05-11"
+      "lastUpdate": "2026-05-18"
     },
     {
       "symbol": "TSLA",
       "name": "Tesla",
       "market": "US",
-      "lastUpdate": "2026-05-11"
+      "lastUpdate": "2026-05-18"
     },
     {
       "symbol": "NVDA",
       "name": "NVIDIA",
       "market": "US",
-      "lastUpdate": "2026-05-11"
+      "lastUpdate": "2026-05-18"
     },
     {
       "symbol": "AAPL",
       "name": "Apple",
       "market": "US",
-      "lastUpdate": "2026-05-11"
+      "lastUpdate": "2026-05-18"
     },
     {
       "symbol": "META",
       "name": "Meta",
       "market": "US",
-      "lastUpdate": "2026-05-11"
+      "lastUpdate": "2026-05-18"
     },
     {
       "symbol": "MSFT",
       "name": "Microsoft",
       "market": "US",
-      "lastUpdate": "2026-05-11"
+      "lastUpdate": "2026-05-18"
     },
     {
       "symbol": "AMZN",
       "name": "Amazon",
       "market": "US",
-      "lastUpdate": "2026-05-11"
+      "lastUpdate": "2026-05-18"
     }
   ]
 }
