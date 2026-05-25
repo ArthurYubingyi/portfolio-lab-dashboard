@@ -1,38 +1,38 @@
 {
   "symbol": "MSFT",
-  "lastUpdate": "2026-05-18",
+  "lastUpdate": "2026-05-25",
   "current": {
-    "pe": 25.13,
-    "pb": 7.56,
-    "ps": 9.85,
-    "dividendYield": 0.86,
-    "peg": 1.3
+    "pe": 24.94,
+    "pb": 7.5,
+    "ps": 9.77,
+    "dividendYield": 0.87,
+    "peg": 1.29
   },
   "history5y": {
     "pe": {
-      "min": 15.08,
-      "max": 37.69,
-      "median": 25.13,
+      "min": 14.97,
+      "max": 37.42,
+      "median": 24.94,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 4.54,
-      "max": 10.59,
-      "median": 7.56,
+      "min": 4.5,
+      "max": 10.51,
+      "median": 7.5,
       "currentPercentile": 50.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 15.08,
-      "max": 37.69,
-      "median": 25.13,
+      "min": 14.97,
+      "max": 37.42,
+      "median": 24.94,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 4.54,
-      "max": 10.59,
-      "median": 7.56,
+      "min": 4.5,
+      "max": 10.51,
+      "median": 7.5,
       "currentPercentile": 50.0
     }
   },
