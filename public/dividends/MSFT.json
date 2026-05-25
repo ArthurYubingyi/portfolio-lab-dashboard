@@ -1,7 +1,13 @@
 {
   "symbol": "MSFT",
-  "lastUpdate": "2026-05-18",
+  "lastUpdate": "2026-05-25",
   "history": [
+    {
+      "exDividendDate": "2026-05-21",
+      "paymentDate": null,
+      "amount": 0.91,
+      "currency": "USD"
+    },
     {
       "exDividendDate": "2026-02-19",
       "paymentDate": null,
@@ -175,21 +181,7 @@
       "paymentDate": null,
       "amount": 0.46,
       "currency": "USD"
-    },
-    {
-      "exDividendDate": "2018-11-14",
-      "paymentDate": null,
-      "amount": 0.46,
-      "currency": "USD"
     }
   ],
-  "upcoming": [
-    {
-      "exDividendDate": "2026-05-21",
-      "paymentDate": null,
-      "amount": null,
-      "currency": "USD",
-      "estimated": true
-    }
-  ]
+  "upcoming": []
 }
