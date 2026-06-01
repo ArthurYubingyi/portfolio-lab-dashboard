@@ -1,16 +1,30 @@
 {
   "symbol": "01024.HK",
-  "name": "快手-W",
-  "market": "HK",
-  "lastUpdate": "2026-05-01",
-  "current": { "pe": 14.0, "pb": 2.5, "ps": 1.3, "dividendYield": 0.0, "peg": 0.8 },
+  "lastUpdate": "2026-06-01",
+  "current": {
+    "pe": 9.94,
+    "pb": null,
+    "ps": null,
+    "dividendYield": null,
+    "peg": null
+  },
   "history5y": {
-    "pe": { "min": 8.0, "max": 60.0, "median": 22.0, "currentPercentile": 24.0 },
-    "pb": { "min": 1.5, "max": 8.0, "median": 3.5, "currentPercentile": 20.0 }
+    "pe": {
+      "min": 9.05,
+      "max": 195.57,
+      "median": 15.66,
+      "currentPercentile": 5.4
+    }
   },
   "history10y": {
-    "pe": { "min": 8.0, "max": 60.0, "median": 22.0, "currentPercentile": 24.0 },
-    "pb": { "min": 1.5, "max": 8.0, "median": 3.5, "currentPercentile": 20.0 }
+    "pe": {
+      "min": 9.05,
+      "max": 195.57,
+      "median": 15.66,
+      "currentPercentile": 5.4
+    }
   },
-  "source": "seed"
+  "source": "akshare-baidu",
+  "name": "快手-W",
+  "market": "HK"
 }

@@ -1,38 +1,38 @@
 {
   "symbol": "NVDA",
-  "lastUpdate": "2026-05-25",
+  "lastUpdate": "2026-06-01",
   "current": {
-    "pe": 33.03,
-    "pb": 33.27,
-    "ps": 20.57,
-    "dividendYield": 0.02,
-    "peg": 0.66
+    "pe": 32.38,
+    "pb": 32.62,
+    "ps": 20.17,
+    "dividendYield": 0.47,
+    "peg": 0.65
   },
   "history5y": {
     "pe": {
-      "min": 19.82,
-      "max": 49.54,
-      "median": 33.03,
+      "min": 19.43,
+      "max": 48.58,
+      "median": 32.38,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 19.96,
-      "max": 46.58,
-      "median": 33.27,
+      "min": 19.57,
+      "max": 45.67,
+      "median": 32.62,
       "currentPercentile": 50.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 19.82,
-      "max": 49.54,
-      "median": 33.03,
+      "min": 19.43,
+      "max": 48.58,
+      "median": 32.38,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 19.96,
-      "max": 46.58,
-      "median": 33.27,
+      "min": 19.57,
+      "max": 45.67,
+      "median": 32.62,
       "currentPercentile": 50.0
     }
   },
