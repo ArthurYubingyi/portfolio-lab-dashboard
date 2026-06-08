@@ -1,7 +1,13 @@
 {
   "symbol": "NVDA",
-  "lastUpdate": "2026-06-01",
+  "lastUpdate": "2026-06-08",
   "history": [
+    {
+      "exDividendDate": "2026-06-04",
+      "paymentDate": null,
+      "amount": 0.25,
+      "currency": "USD"
+    },
     {
       "exDividendDate": "2026-03-11",
       "paymentDate": null,
@@ -175,21 +181,7 @@
       "paymentDate": null,
       "amount": 0.004,
       "currency": "USD"
-    },
-    {
-      "exDividendDate": "2018-11-29",
-      "paymentDate": null,
-      "amount": 0.004,
-      "currency": "USD"
     }
   ],
-  "upcoming": [
-    {
-      "exDividendDate": "2026-06-04",
-      "paymentDate": null,
-      "amount": null,
-      "currency": "USD",
-      "estimated": true
-    }
-  ]
+  "upcoming": []
 }
