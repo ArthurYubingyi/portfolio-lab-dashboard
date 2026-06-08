@@ -1,71 +1,71 @@
 {
-  "updated": "2026-06-01",
+  "updated": "2026-06-08",
   "list": [
     {
       "symbol": "00700.HK",
       "name": "腾讯控股",
       "market": "HK",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "09988.HK",
       "name": "阿里巴巴-W",
       "market": "HK",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "01024.HK",
       "name": "快手-W",
       "market": "HK",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "03690.HK",
       "name": "美团-W",
       "market": "HK",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "GOOG",
       "name": "Alphabet",
       "market": "US",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "TSLA",
       "name": "Tesla",
       "market": "US",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "NVDA",
       "name": "NVIDIA",
       "market": "US",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "AAPL",
       "name": "Apple",
       "market": "US",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "META",
       "name": "Meta",
       "market": "US",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "MSFT",
       "name": "Microsoft",
       "market": "US",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     },
     {
       "symbol": "AMZN",
       "name": "Amazon",
       "market": "US",
-      "lastUpdate": "2026-06-01"
+      "lastUpdate": "2026-06-08"
     }
   ]
 }
