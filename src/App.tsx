@@ -1044,6 +1044,15 @@ export default function App() {
     showToast('已清理异常净值历史')
   }
 
+  const handleResetNavHistory = () => {
+    if (!confirm('彻底重置净值历史？所有历史净值记录将被删除，仅保留起始点。持仓、资金流、主题等其他数据不变。\n\n点击确定后请再次点击"刷新行情"以记录当前的正确净值。')) return
+    update(s => ({
+      ...s,
+      navHistory: [{ date: s.epochDate, nav: INITIAL_NAV, totalCny: 0 }],
+    }))
+    showToast('净值历史已重置，请点击刷新行情记录最新净值')
+  }
+
   /* ────── AI Chat (#2) ────── */
   const buildPortfolioContext = useCallback(() => {
     const lines: string[] = []
@@ -1984,6 +1993,7 @@ export default function App() {
           <button className="sm" onClick={handleImport}>导入数据</button>
           <button className="sm danger" onClick={handleReset}>重置数据</button>
           <button className="sm" onClick={handleCleanNavHistory} style={{ marginLeft: 8 }}>清理异常净值历史</button>
+          <button className="sm danger" onClick={handleResetNavHistory} style={{ marginLeft: 8 }}>重置净值历史</button>
         </p>
       </div>
 
