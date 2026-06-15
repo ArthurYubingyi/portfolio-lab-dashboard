@@ -80,7 +80,7 @@ interface ChatMessage {
 /* ────────── defaults ────────── */
 const EPOCH_DATE = '2026-02-13'
 const INITIAL_SHARES = 10000
-const INITIAL_NAV = 11000.0
+const INITIAL_NAV = 11100.0
 
 /* ────────── 静态资产默认值 (CNY) ────────── */
 const DEFAULT_CASH_FIXED = 33_798_828   // 现金固收
