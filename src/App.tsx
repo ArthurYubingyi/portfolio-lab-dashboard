@@ -621,14 +621,16 @@ export default function App() {
         })
 
         const totalCny = calcTotalValueCny(newPositions, newOptions, fx.usdcny, fx.hkdcny)
-        const nav = calcNavPerShare(totalCny, s.totalShares)
+        // 总资产 = 场内持仓 + 现金固收 + 实物黄金 + 场外股票基金
+        const totalAssetsForNav = totalCny + s.cashFixed + s.physicalGold + s.offmarketFund
+        const nav = calcNavPerShare(totalAssetsForNav, s.totalShares)
 
         let newHistory = [...s.navHistory]
         const lastIdx = newHistory.findIndex(r => r.date === now)
         if (lastIdx >= 0) {
-          newHistory[lastIdx] = { date: now, nav, totalCny }
+          newHistory[lastIdx] = { date: now, nav, totalCny: totalAssetsForNav }
         } else {
-          newHistory.push({ date: now, nav, totalCny })
+          newHistory.push({ date: now, nav, totalCny: totalAssetsForNav })
         }
 
         return {
@@ -661,9 +663,13 @@ export default function App() {
     [state.positions, state.options, state.usdcny, state.hkdcny]
   )
 
+  // 总资产 = 场内所有持仓市值 + 现金固收 + 实物黄金 + 场外股票基金
+  // 必须先计算 totalAssets，因为单位净值的分子应该是总资产（不是仅场内）
+  const totalAssets = totalCny + state.cashFixed + state.physicalGold + state.offmarketFund
+
   const navPerShare = useMemo(() =>
-    calcNavPerShare(totalCny, state.totalShares),
-    [totalCny, state.totalShares]
+    calcNavPerShare(totalAssets, state.totalShares),
+    [totalAssets, state.totalShares]
   )
 
   const latestNav = state.navHistory.length > 0 ? state.navHistory[state.navHistory.length - 1] : null
@@ -685,9 +691,6 @@ export default function App() {
   const displayNav = latestNav?.nav ?? navPerShare
   const dayChange = prevNav ? ((displayNav - prevNav.nav) / prevNav.nav * 100) : 0
   const sinceInception = ((displayNav / INITIAL_NAV) - 1) * 100
-
-  // 总资产 = 场内所有持仓市值 + 现金固收 + 实物黄金 + 场外股票基金
-  const totalAssets = totalCny + state.cashFixed + state.physicalGold + state.offmarketFund
 
   // Positions with CNY value — weight based on totalAssets (#4)
   const positionsEnriched = useMemo(() =>
