@@ -13,6 +13,7 @@ import { ValuationCell, ValuationDetailDialog, ValuationMonitorTab } from './val
 import { BuyPlansTab, BuyPlanBanner, useBuyPlans, pickActiveAlerts } from './buy_plans'
 import { FearCheckTab } from './fear_check'
 import { DividendsTab } from './dividends'
+import { DividendRegister } from './dividend_register'
 /* ────────── types ────────── */
 interface Position {
   id: string
@@ -70,6 +71,20 @@ interface AppState {
   physicalGold: number    // 实物黄金 (CNY)
   offmarketFund: number   // 场外股票基金 (CNY)
   earningsCalendar?: EarningsEntry[]  // P1: 财报日历（手动录入）
+  dividendLog?: DividendRecord[]  // 分红记录
+}
+
+interface DividendRecord {
+  id: string
+  date: string
+  symbol: string
+  name: string
+  perShare: number        // 每股分红（原始货币）
+  shares: number          // 持股数
+  currency: 'CNY' | 'HKD' | 'USD'
+  grossAmount: number     // 税前总额（原始货币）
+  netAmountCny: number    // 税后到账（折算CNY，已加入现金固收）
+  note?: string
 }
 
 interface ChatMessage {
@@ -848,6 +863,28 @@ export default function App() {
         showToast('决策已记录，持仓已添加')
       }
     })
+  }
+
+  /* ────── 分红登记 ────── */
+  const handleRegisterDividend = (record: import('./dividend_register').DividendRecord) => {
+    update(s => ({
+      ...s,
+      cashFixed: s.cashFixed + record.netAmountCny,
+      dividendLog: [...(s.dividendLog || []), record],
+    }))
+    showToast(`已登记 ${record.name} 分红，¥${record.netAmountCny.toLocaleString('zh-CN', { maximumFractionDigits: 0 })} 已计入现金固收`)
+  }
+
+  const handleDeleteDividend = (id: string) => {
+    const rec = (state.dividendLog || []).find(d => d.id === id)
+    if (!rec) return
+    if (!confirm(`删除这笔分红记录？¥${rec.netAmountCny.toLocaleString('zh-CN', { maximumFractionDigits: 0 })} 将从现金固收扣回。`)) return
+    update(s => ({
+      ...s,
+      cashFixed: Math.max(0, s.cashFixed - rec.netAmountCny),
+      dividendLog: (s.dividendLog || []).filter(d => d.id !== id),
+    }))
+    showToast('分红记录已删除，现金已扣回')
   }
 
   /* ────── delta qty (adjust shares) ────── */
@@ -1880,7 +1917,17 @@ export default function App() {
       {/* ===== DIVIDENDS TAB (第三批·模块四) ===== */}
       {tab === 'dividends' && (
         <div style={{ marginTop: 16 }}>
-          <DividendsTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, currency: p.currency, quantity: p.qty }))} />
+          <DividendRegister
+            symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, currency: p.currency, quantity: p.qty }))}
+            dividendLog={state.dividendLog || []}
+            usdcny={state.usdcny}
+            hkdcny={state.hkdcny}
+            onRegister={handleRegisterDividend}
+            onDelete={handleDeleteDividend}
+          />
+          <div style={{ marginTop: 24 }}>
+            <DividendsTab symbolHints={state.positions.map(p => ({ symbol: p.symbol, name: p.name, currency: p.currency, quantity: p.qty }))} />
+          </div>
         </div>
       )}
 
