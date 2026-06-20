@@ -103,7 +103,7 @@ ${counters}`
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 3500,
       system: MONTHLY_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],

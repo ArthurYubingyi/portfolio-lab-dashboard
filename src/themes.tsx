@@ -605,7 +605,7 @@ ${theme.counterEvidence.map(c => `- [严重度${c.severity}/${c.status}] ${c.des
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-5-20250929',
           max_tokens: 2048,
           system: systemPrompt,
           messages: [{ role: 'user', content: `请按上述结构对"${theme.name}"主题进行分析。` }],

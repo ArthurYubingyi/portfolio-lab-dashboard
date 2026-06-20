@@ -82,7 +82,7 @@ ROE 信念: ${roeBelief} (${roeTarget}%+)
             'anthropic-dangerous-direct-browser-access': 'true',
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 600,
             messages: [{ role: 'user', content: q }],
           }),
