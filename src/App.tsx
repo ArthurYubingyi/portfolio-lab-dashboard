@@ -266,6 +266,17 @@ const PROMPT_INTEGRATED = `你是Arthur的"投资委员会主席"，融合巴菲
 
 type AdvisorPerspective = 'integrated' | 'buffett' | 'wangyuquan' | 'wangchuan'
 
+// 简洁性约束 — 追加到所有视角，避免长篇大论
+const BREVITY_RULE = `
+
+## 输出规范（必须遵守）
+- **简洁优先**：默认控制在300字以内。Arthur明确讨厌长篇大论。
+- **结论先行**：第一句话直接给结论/建议，再给1-3条关键理由。
+- **不要穷举**：不要把框架的每一条都展开，只讲最相关的2-3点。
+- **不用代码块画表格**除非Arthur明确要求。
+- **一次说完**：不要刻意拆成多段让Arthur追问"继续"，在一条回复内说完核心观点。
+- 如果问题确实复杂需要长答案，先给一段精炼结论，再问Arthur"需要展开哪部分？"，而不是直接铺开几千字。`
+
 const PERSPECTIVE_LABELS: Record<AdvisorPerspective, string> = {
   integrated: '综合（默认）',
   buffett: '巴菲特/段永平',
@@ -274,10 +285,10 @@ const PERSPECTIVE_LABELS: Record<AdvisorPerspective, string> = {
 }
 
 const PROMPT_MAP: Record<AdvisorPerspective, string> = {
-  integrated: PROMPT_INTEGRATED,
-  buffett: PROMPT_BUFFETT,
-  wangyuquan: PROMPT_WANGYUQUAN,
-  wangchuan: PROMPT_WANGCHUAN,
+  integrated: PROMPT_INTEGRATED + BREVITY_RULE,
+  buffett: PROMPT_BUFFETT + BREVITY_RULE,
+  wangyuquan: PROMPT_WANGYUQUAN + BREVITY_RULE,
+  wangchuan: PROMPT_WANGCHUAN + BREVITY_RULE,
 }
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
@@ -1139,7 +1150,7 @@ export default function App() {
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-5-20250929',
-          max_tokens: 2048,
+          max_tokens: 4096,
           system: systemPrompt,
           messages: apiMessages,
         }),
