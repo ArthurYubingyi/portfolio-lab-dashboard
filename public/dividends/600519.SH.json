@@ -1,6 +1,6 @@
 {
   "symbol": "600519.SH",
-  "lastUpdate": "2026-06-15",
+  "lastUpdate": "2026-06-22",
   "history": [
     {
       "exDividendDate": "2025-12-19",
@@ -183,5 +183,13 @@
       "currency": "CNY"
     }
   ],
-  "upcoming": []
+  "upcoming": [
+    {
+      "exDividendDate": "2026-06-26",
+      "paymentDate": "2026-06-26",
+      "amount": null,
+      "currency": "CNY",
+      "estimated": true
+    }
+  ]
 }
