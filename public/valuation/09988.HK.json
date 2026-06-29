@@ -1,8 +1,8 @@
 {
   "symbol": "09988.HK",
-  "lastUpdate": "2026-06-22",
+  "lastUpdate": "2026-06-29",
   "current": {
-    "pe": 16.47,
+    "pe": 14.33,
     "pb": null,
     "ps": null,
     "dividendYield": null,
@@ -12,16 +12,16 @@
     "pe": {
       "min": 9.24,
       "max": 164.87,
-      "median": 22.61,
-      "currentPercentile": 16.5
+      "median": 22.46,
+      "currentPercentile": 6.1
     }
   },
   "history10y": {
     "pe": {
       "min": 9.24,
       "max": 164.87,
-      "median": 22.61,
-      "currentPercentile": 16.5
+      "median": 22.46,
+      "currentPercentile": 6.1
     }
   },
   "source": "akshare-baidu",
