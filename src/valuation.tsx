@@ -434,6 +434,10 @@ export function ValuationMonitorTab({ heldSymbols }: MonitorProps) {
 
         {loading && <div style={{ color: 'var(--fg2)', fontSize: '.85rem' }}>加载中…</div>}
 
+        <div style={{ fontSize: '.75rem', color: 'var(--fg2)', marginBottom: 8 }}>
+          ⚠️ 估值分位数据暂不可用，仅供参考，待接入可靠历史数据源后补全
+        </div>
+
         <div className="table-wrap">
           <table>
             <thead>
