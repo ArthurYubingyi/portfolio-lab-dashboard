@@ -49,6 +49,33 @@ function symbolToFile(symbol: string): string {
   return symbol.replace(/\//g, '_')
 }
 
+/** 判断某个 source 的分位数据是否可信（非硬编码占位） */
+function isPercentileTrusted(data: ValuationData | null | undefined): boolean {
+  if (!data) return false
+  const src = data.source ?? ''
+  // seed = 手工种子数据; yfinance = 美股三点估算占位（50% 硬编码）
+  if (src === 'seed' || src === 'yfinance') return false
+  return true
+}
+
+/**
+ * 刷新行情后，将腾讯接口解析出的实时 PE/PB 写入内存缓存。
+ * 如果 symbol 尚未加载过 valuation 数据，则跳过。
+ */
+export function patchValuationPePb(symbol: string, pe: number | null, pb: number | null): void {
+  const existing = memoryCache.get(symbol)
+  if (!existing) return  // 未加载则跳过，不创建假数据
+  const patched: ValuationData = {
+    ...existing,
+    current: {
+      ...existing.current,
+      ...(pe != null && pe > 0 ? { pe } : {}),
+      ...(pb != null && pb > 0 ? { pb } : {}),
+    },
+  }
+  memoryCache.set(symbol, patched)
+}
+
 export async function loadValuation(symbol: string): Promise<ValuationData | null> {
   if (memoryCache.has(symbol)) return memoryCache.get(symbol) ?? null
   try {
@@ -143,6 +170,8 @@ export function percentileLabel(p: number | null | undefined): string {
 
 export function buildAdvice(data: ValuationData | null | undefined): string {
   if (!data) return '无数据'
+  // 分位来源不可信（硬编码占位或手工种子数据）时，不给出凯利信号
+  if (!isPercentileTrusted(data)) return '分位数据不足'
   const p5 = data.history5y?.pe?.currentPercentile
   const p10 = data.history10y?.pe?.currentPercentile
   if (p5 == null && p10 == null) return '历史数据不足'
@@ -177,6 +206,9 @@ export function ValuationBar({ data, small = false }: BarProps) {
   const p = data?.history5y?.pe?.currentPercentile ?? data?.history10y?.pe?.currentPercentile
   if (data == null) {
     return <span style={{ color: 'var(--fg2)', fontSize: '.75rem' }}>—</span>
+  }
+  if (!isPercentileTrusted(data)) {
+    return <span style={{ color: 'var(--fg2)', fontSize: '.75rem' }}>分位数据不足</span>
   }
   if (p == null) {
     return <span style={{ color: 'var(--fg2)', fontSize: '.75rem' }}>无史</span>
@@ -423,17 +455,24 @@ export function ValuationMonitorTab({ heldSymbols }: MonitorProps) {
                   </td>
                   <td>{row.market}</td>
                   <td className="r">{fmt(row.v?.current.pe ?? null)}</td>
-                  <td className="r">{fmt(row.v?.current.pb ?? null)}</td>
+                  <td className="r">
+                    {fmt(row.v?.current.pb ?? null)}
+                    {row.symbol === '600036.SH' && row.v?.current.pb != null && (
+                      <span style={{ fontSize: '.68rem', color: 'var(--fg2)', marginLeft: 4 }}>银行股以PB为准</span>
+                    )}
+                  </td>
                   <td className="r">{row.dy != null ? `${(row.dy * 100).toFixed(2)}%` : '—'}</td>
                   <td className="r">
-                    <span style={{ color: percentileColor(row.p5), fontWeight: 600 }}>
-                      {row.p5 != null ? `${row.p5}%` : '—'}
-                    </span>
+                    {isPercentileTrusted(row.v)
+                      ? <span style={{ color: percentileColor(row.p5), fontWeight: 600 }}>{row.p5 != null ? `${row.p5}%` : '—'}</span>
+                      : <span style={{ color: 'var(--fg2)', fontSize: '.8rem' }}>分位数据不足</span>
+                    }
                   </td>
                   <td className="r">
-                    <span style={{ color: percentileColor(row.p10), fontWeight: 600 }}>
-                      {row.p10 != null ? `${row.p10}%` : '—'}
-                    </span>
+                    {isPercentileTrusted(row.v)
+                      ? <span style={{ color: percentileColor(row.p10), fontWeight: 600 }}>{row.p10 != null ? `${row.p10}%` : '—'}</span>
+                      : <span style={{ color: 'var(--fg2)', fontSize: '.8rem' }}>分位数据不足</span>
+                    }
                   </td>
                   <td style={{ fontSize: '.78rem' }}>{buildAdvice(row.v)}</td>
                   <td>

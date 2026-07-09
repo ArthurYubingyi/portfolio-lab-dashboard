@@ -9,7 +9,7 @@ import { SignalsTab } from './signals'
 import { useReviews, ReviewSection } from './reviews'
 import { useMonthlyReports, MonthlyReportSection } from './monthly_reports'
 import { EarningsBanner, EarningsManager, pickEarningsAlerts, type EarningsEntry } from './earnings'
-import { ValuationCell, ValuationDetailDialog, ValuationMonitorTab } from './valuation'
+import { ValuationCell, ValuationDetailDialog, ValuationMonitorTab, patchValuationPePb } from './valuation'
 import { BuyPlansTab, BuyPlanBanner, useBuyPlans, pickActiveAlerts } from './buy_plans'
 import { FearCheckTab } from './fear_check'
 import { DividendsTab } from './dividends'
@@ -375,9 +375,9 @@ async function fetchFxRates(): Promise<{ usdcny: number; hkdcny: number }> {
   }
 }
 
-async function fetchASharePrices(symbols: string[]): Promise<Record<string, number>> {
+async function fetchASharePrices(symbols: string[]): Promise<Record<string, { price: number; pe?: number; pb?: number }>> {
   if (!symbols.length) return {}
-  const prices: Record<string, number> = {}
+  const result: Record<string, { price: number; pe?: number; pb?: number }> = {}
   const tencentCodes = symbols.map(s => {
     const [code, suffix] = s.split('.')
     return suffix.toLowerCase() + code
@@ -396,10 +396,17 @@ async function fetchASharePrices(symbols: string[]): Promise<Record<string, numb
       let sym = ''
       if (code.startsWith('sz')) sym = code.slice(2) + '.SZ'
       else if (code.startsWith('sh')) sym = code.slice(2) + '.SH'
-      if (sym) prices[sym] = price
+      if (!sym) return
+      const pe = parseFloat(fields[39])  // PE TTM
+      const pb = parseFloat(fields[46])  // PB
+      result[sym] = {
+        price,
+        ...(isFinite(pe) && pe > 0 ? { pe } : {}),
+        ...(isFinite(pb) && pb > 0 ? { pb } : {}),
+      }
     })
   } catch (e) { console.warn('A-share fetch failed', e) }
-  return prices
+  return result
 }
 
 async function fetchHKPrices(symbols: string[]): Promise<Record<string, number>> {
@@ -628,7 +635,15 @@ export default function App() {
         fetchUSPrices(usSyms),
       ])
 
-      const allPrices = { ...aPrices, ...hkPrices, ...usPrices }
+      // 从 A股结果中提取纯价格 map，与港/美合并
+      const aPriceOnly: Record<string, number> = {}
+      for (const [sym, v] of Object.entries(aPrices)) {
+        aPriceOnly[sym] = v.price
+        // 将实时 PE/PB 写入估值内存缓存（供估值监控 tab 展示）
+        patchValuationPePb(sym, v.pe ?? null, v.pb ?? null)
+      }
+
+      const allPrices = { ...aPriceOnly, ...hkPrices, ...usPrices }
       const now = today()
 
       // Count how many symbols failed
