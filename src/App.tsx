@@ -111,7 +111,7 @@ const defaultPositions: Position[] = [
   // A股 / 基金
   { id: 's1', symbol: '600036.SH', name: '招商银行', qty: 455400, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
   { id: 's2', symbol: '300750.SZ', name: '宁德时代', qty: 12400, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
-  { id: 's3', symbol: '159934.SZ', name: '黄金ETF易方达', qty: 95721, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
+  { id: 's3', symbol: '159934.SZ', name: '黄金ETF易方达', qty: 215700, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
   { id: 's4', symbol: '002027.SZ', name: '分众传媒', qty: 463100, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
   { id: 's5', symbol: '510900.SH', name: '恒生中国企业ETF', qty: 300000, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
   { id: 's6', symbol: '159941.SZ', name: '纳指ETF广发', qty: 100000, currency: 'CNY', market: 'A', lastPrice: 0, lastUpdated: '' },
