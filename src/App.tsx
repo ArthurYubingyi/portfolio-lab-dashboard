@@ -1382,7 +1382,7 @@ export default function App() {
         <div className="card">
           <div className="label">总份额</div>
           <div className="value">{fmtNum(state.totalShares, 2)}</div>
-          <div className="sub">初始 {fmtInt(INITIAL_SHARES)} 份</div>
+          <div className="sub">初始份额 = 纪元日总资产</div>
         </div>
       </div>
 
