@@ -1,8 +1,8 @@
 {
   "symbol": "00700.HK",
-  "lastUpdate": "2026-07-06",
+  "lastUpdate": "2026-07-13",
   "current": {
-    "pe": 14.72,
+    "pe": 15.71,
     "pb": null,
     "ps": null,
     "dividendYield": null,
@@ -10,18 +10,18 @@
   },
   "history5y": {
     "pe": {
-      "min": 10.84,
-      "max": 94.04,
-      "median": 36.94,
-      "currentPercentile": 6.3
+      "min": 9.35,
+      "max": 95.08,
+      "median": 36.44,
+      "currentPercentile": 8.1
     }
   },
   "history10y": {
     "pe": {
-      "min": 10.84,
-      "max": 94.04,
-      "median": 36.94,
-      "currentPercentile": 6.3
+      "min": 9.35,
+      "max": 95.08,
+      "median": 36.44,
+      "currentPercentile": 8.1
     }
   },
   "source": "akshare-baidu",
