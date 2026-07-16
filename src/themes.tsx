@@ -8,6 +8,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { DEFAULT_PRESET_QUESTIONS, GENERIC_PRESET_QUESTIONS, pickPerspective, type ChatPerspective } from './preset_questions'
+import { apiFetch } from './useToken'
 
 /* ────────── types ────────── */
 export interface VariableHistory {
@@ -558,12 +559,6 @@ function ThemeDetail({ theme, onBack, onUpdate, showToast, symbolNameMap, onAskA
   /* ────── AI 分析（P1） ────── */
   const handleAiAnalyze = async () => {
     if (aiLoading) return
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const apiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_ANTHROPIC_API_KEY) || ''
-    if (!apiKey) {
-      showToast('未配置 VITE_ANTHROPIC_API_KEY，无法调用 AI')
-      return
-    }
     setAiLoading(true)
     setAiResult(null)
     try {
@@ -596,14 +591,8 @@ ${theme.counterEvidence.map(c => `- [严重度${c.severity}/${c.status}] ${c.des
 ## 6. 接下来3个月需要重点关注的观测信号
 列出具体的可量化指标`
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await apiFetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
         body: JSON.stringify({
           model: 'claude-sonnet-4-5-20250929',
           max_tokens: 2048,

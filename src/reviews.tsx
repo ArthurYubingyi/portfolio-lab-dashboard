@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Decision } from './decisions'
 import type { Theme } from './themes'
+import { apiFetch } from './useToken'
 
 export interface DecisionReview {
   id: string
@@ -82,10 +83,6 @@ const REVIEW_SYSTEM_PROMPT = `你是Arthur的投资行为复盘助手，基于�
 
 /* ────── 调用 AI 生成复盘 ────── */
 export async function generateReview(decisions: Decision[], themes: Theme[]): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const apiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_ANTHROPIC_API_KEY) || ''
-  if (!apiKey) throw new Error('未配置 VITE_ANTHROPIC_API_KEY，无法调用 AI')
-
   const themeMap: Record<string, Theme> = {}
   themes.forEach(t => { themeMap[t.id] = t })
 
@@ -110,14 +107,8 @@ export async function generateReview(decisions: Decision[], themes: Theme[]): Pr
 
   const userMsg = `请对以下 ${decisions.length} 次决策进行复盘：\n\n${decisionsText}`
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await apiFetch('/api/chat', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
     body: JSON.stringify({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 2500,

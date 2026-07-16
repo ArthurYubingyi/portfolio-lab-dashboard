@@ -14,6 +14,7 @@ import { BuyPlansTab, BuyPlanBanner, useBuyPlans, pickActiveAlerts } from './buy
 import { FearCheckTab } from './fear_check'
 import { DividendsTab } from './dividends'
 import { DividendRegister } from './dividend_register'
+import { useToken, apiFetch } from './useToken'
 /* ────────── types ────────── */
 interface Position {
   id: string
@@ -519,6 +520,8 @@ const ASSET_PIE_COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#d97706',
 /* ────────── component ────────── */
 export default function App() {
   const [state, setState] = useState<AppState>(() => loadState() ?? buildInitialState())
+  const { token, showPrompt, saveToken, clearToken } = useToken()
+  const [tokenInput, setTokenInput] = useState('')
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
     return false
@@ -1147,22 +1150,14 @@ export default function App() {
     setChatLoading(true)
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const apiKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_ANTHROPIC_API_KEY) || ''
       const portfolioCtx = buildPortfolioContext()
       const basePrompt = PROMPT_MAP[chatPerspective] || PROMPT_INTEGRATED
       const systemPrompt = basePrompt + '\n\n' + portfolioCtx
 
       const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }))
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await apiFetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
         body: JSON.stringify({
           model: 'claude-sonnet-4-5-20250929',
           max_tokens: 4096,
@@ -1182,7 +1177,7 @@ export default function App() {
     } catch (e) {
       console.error('Chat error', e)
       const errorMsg = e instanceof Error ? e.message : '未知错误'
-      setChatMessages(prev => [...prev, { role: 'assistant', content: `请求失败: ${errorMsg}\n\n请确认已配置 VITE_ANTHROPIC_API_KEY 环境变量。` }])
+      setChatMessages(prev => [...prev, { role: 'assistant', content: `请求失败: ${errorMsg}` }])
     } finally {
       setChatLoading(false)
     }
@@ -1285,6 +1280,29 @@ export default function App() {
   /* ────── render ────── */
   return (
     <div className="container" style={{ paddingBottom: 40 }}>
+      {/* 口令弹框 */}
+      {showPrompt && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+        }}>
+          <div className="card" style={{ width: 320, padding: 24 }}>
+            <div style={{ fontWeight: 600, marginBottom: 12 }}>输入访问口令</div>
+            <input
+              type="password"
+              value={tokenInput}
+              onChange={e => setTokenInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveToken(tokenInput) }}
+              placeholder="口令"
+              autoFocus
+              style={{ width: '100%', marginBottom: 12 }}
+            />
+            <button className="primary" style={{ width: '100%' }} onClick={() => saveToken(tokenInput)}>
+              确认
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header>
         <div className="inner">
@@ -1306,6 +1324,9 @@ export default function App() {
             </button>
             <button onClick={() => setDarkMode(!darkMode)} title="切换主题" style={{ fontSize: '1rem', padding: '4px 8px' }}>
               {darkMode ? '☀️' : '🌙'}
+            </button>
+            <button onClick={clearToken} title="重置访问口令" style={{ fontSize: '.75rem', padding: '4px 8px' }}>
+              🔑
             </button>
           </div>
         </div>
@@ -1477,8 +1498,8 @@ export default function App() {
             <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
               <div className="card">
                 <div className="label">总资产 (含场外)</div>
-                <div className="value" style={{ fontSize: '1.3rem' }}>¥{fmtInt(totalAssets)}</div>
-                <div className="sub">${fmtInt(totalAssets / (state.usdcny || 7.25))}</div>
+                <div className="value" style={{ fontSize: '1.3rem' }}>{token ? `¥${fmtInt(totalAssets)}` : '***'}</div>
+                <div className="sub">{token ? `$${fmtInt(totalAssets / (state.usdcny || 7.25))}` : '***'}</div>
               </div>
               <div className="card">
                 <div className="label">权益仓位</div>

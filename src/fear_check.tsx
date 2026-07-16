@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useValuation } from './valuation'
+import { apiFetch } from './useToken'
 
 /**
  * 第三批 · 模块三 — 恐高心理诊断器
@@ -11,7 +12,6 @@ import { useValuation } from './valuation'
  * 提供一个客观自检流程，把「不买」的真实理由摊开。
  */
 
-const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined
 
 type FearReason =
   | 'overvalued'        // 估值偏高，理性
@@ -59,7 +59,7 @@ export function FearCheckTab({ symbolHints }: FearCheckTabProps) {
   }
 
   const askAI = async () => {
-    if (!symbol || !ANTHROPIC_KEY) return
+    if (!symbol) return
     setAiLoading(true)
     try {
       const ctx = `标的: ${symbol}${name ? ` (${name})` : ''}
@@ -73,14 +73,8 @@ ROE 信念: ${roeBelief} (${roeTarget}%+)
       const wangyuquan = `你是段永平/王雨权风格的长期投资者，请用简短中文(150字内)直接回答：基于以上信息，"在当前价位买入" 你会同意吗？为什么？务必给出明确的「会买/不会买/视情况」结论。\n\n${ctx}`
 
       const ask = async (q: string) => {
-        const r = await fetch('https://api.anthropic.com/v1/messages', {
+        const r = await apiFetch('/api/chat', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': ANTHROPIC_KEY!,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-          },
           body: JSON.stringify({
             model: 'claude-sonnet-4-5-20250929',
             max_tokens: 600,
