@@ -94,7 +94,6 @@ ${counters}`
   const res = await apiFetch('/api/chat', {
     method: 'POST',
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 3500,
       system: MONTHLY_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
@@ -105,7 +104,7 @@ ${counters}`
     throw new Error(`API ${res.status}: ${t}`)
   }
   const data = await res.json()
-  return data.content?.[0]?.text || '（AI 无回复）'
+  return data.choices?.[0]?.message?.content || '（AI 无回复）'
 }
 
 interface MonthlyReportSectionProps {

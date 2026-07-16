@@ -110,7 +110,6 @@ export async function generateReview(decisions: Decision[], themes: Theme[]): Pr
   const res = await apiFetch('/api/chat', {
     method: 'POST',
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 2500,
       system: REVIEW_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMsg }],
@@ -121,7 +120,7 @@ export async function generateReview(decisions: Decision[], themes: Theme[]): Pr
     throw new Error(`API ${res.status}: ${t}`)
   }
   const data = await res.json()
-  return data.content?.[0]?.text || '（AI 无回复）'
+  return data.choices?.[0]?.message?.content || '（AI 无回复）'
 }
 
 /* ────── 复盘历史区域（嵌入到决策日志 tab） ────── */

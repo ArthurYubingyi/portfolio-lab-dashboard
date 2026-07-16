@@ -76,14 +76,13 @@ ROE 信念: ${roeBelief} (${roeTarget}%+)
         const r = await apiFetch('/api/chat', {
           method: 'POST',
           body: JSON.stringify({
-            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 600,
             messages: [{ role: 'user', content: q }],
           }),
         })
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
         const j = await r.json()
-        return j.content?.[0]?.text || '(无回答)'
+        return j.choices?.[0]?.message?.content || '(无回答)'
       }
 
       const [b, w] = await Promise.all([ask(buffett), ask(wangyuquan)])

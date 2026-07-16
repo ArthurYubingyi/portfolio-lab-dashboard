@@ -1159,7 +1159,6 @@ export default function App() {
       const res = await apiFetch('/api/chat', {
         method: 'POST',
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5-20250929',
           max_tokens: 4096,
           system: systemPrompt,
           messages: apiMessages,
@@ -1172,7 +1171,7 @@ export default function App() {
       }
 
       const data = await res.json()
-      const assistantMsg = data.content?.[0]?.text || '抱歉，没有收到有效回复。'
+      const assistantMsg = data.choices?.[0]?.message?.content || '抱歉，没有收到有效回复。'
       setChatMessages(prev => [...prev, { role: 'assistant', content: assistantMsg }])
     } catch (e) {
       console.error('Chat error', e)

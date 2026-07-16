@@ -13,20 +13,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' })
+    return res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured' })
   }
 
   try {
-    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+    const { system, messages, max_tokens, ...rest } = req.body as {
+      system?: string
+      messages: { role: string; content: string }[]
+      max_tokens?: number
+      [key: string]: unknown
+    }
+
+    // OpenAI format: prepend system message if provided
+    const fullMessages = system
+      ? [{ role: 'system', content: system }, ...messages]
+      : messages
+
+    const upstream = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: fullMessages,
+        max_tokens: max_tokens ?? 4096,
+        ...rest,
+      }),
     })
 
     const data = await upstream.json()
