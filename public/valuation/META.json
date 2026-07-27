@@ -1,38 +1,38 @@
 {
   "symbol": "META",
-  "lastUpdate": "2026-07-20",
+  "lastUpdate": "2026-07-27",
   "current": {
-    "pe": 23.47,
-    "pb": 6.73,
-    "ps": 7.63,
-    "dividendYield": 0.33,
-    "peg": 0.94
+    "pe": 21.64,
+    "pb": 6.2,
+    "ps": 7.03,
+    "dividendYield": 0.35,
+    "peg": 0.87
   },
   "history5y": {
     "pe": {
-      "min": 14.08,
-      "max": 35.21,
-      "median": 23.47,
+      "min": 12.99,
+      "max": 32.46,
+      "median": 21.64,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 4.04,
-      "max": 9.42,
-      "median": 6.73,
+      "min": 3.72,
+      "max": 8.68,
+      "median": 6.2,
       "currentPercentile": 50.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 14.08,
-      "max": 35.21,
-      "median": 23.47,
+      "min": 12.99,
+      "max": 32.46,
+      "median": 21.64,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 4.04,
-      "max": 9.42,
-      "median": 6.73,
+      "min": 3.72,
+      "max": 8.68,
+      "median": 6.2,
       "currentPercentile": 50.0
     }
   },
