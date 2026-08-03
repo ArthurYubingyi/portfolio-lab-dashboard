@@ -1,6 +1,6 @@
 {
   "symbol": "AAPL",
-  "lastUpdate": "2026-07-27",
+  "lastUpdate": "2026-08-03",
   "history": [
     {
       "exDividendDate": "2026-05-11",
@@ -183,5 +183,13 @@
       "currency": "USD"
     }
   ],
-  "upcoming": []
+  "upcoming": [
+    {
+      "exDividendDate": "2026-08-10",
+      "paymentDate": null,
+      "amount": null,
+      "currency": "USD",
+      "estimated": true
+    }
+  ]
 }
