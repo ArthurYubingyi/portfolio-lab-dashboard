@@ -1,6 +1,6 @@
 {
   "symbol": "300750.SZ",
-  "lastUpdate": "2026-08-03",
+  "lastUpdate": "2026-08-10",
   "history": [
     {
       "exDividendDate": "2026-04-22",
@@ -75,5 +75,13 @@
       "currency": "CNY"
     }
   ],
-  "upcoming": []
+  "upcoming": [
+    {
+      "exDividendDate": "2026-08-10",
+      "paymentDate": "2026-08-10",
+      "amount": null,
+      "currency": "CNY",
+      "estimated": true
+    }
+  ]
 }
