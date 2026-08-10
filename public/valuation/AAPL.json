@@ -1,38 +1,38 @@
 {
   "symbol": "AAPL",
-  "lastUpdate": "2026-08-03",
+  "lastUpdate": "2026-08-10",
   "current": {
-    "pe": 35.47,
-    "pb": 41.97,
-    "ps": 9.72,
-    "dividendYield": 0.35,
-    "peg": 2.46
+    "pe": 35.97,
+    "pb": 42.57,
+    "ps": 9.8,
+    "dividendYield": 0.34,
+    "peg": 2.53
   },
   "history5y": {
     "pe": {
-      "min": 21.28,
-      "max": 53.2,
-      "median": 35.47,
+      "min": 21.58,
+      "max": 53.96,
+      "median": 35.97,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 25.18,
-      "max": 58.76,
-      "median": 41.97,
+      "min": 25.54,
+      "max": 59.6,
+      "median": 42.57,
       "currentPercentile": 50.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 21.28,
-      "max": 53.2,
-      "median": 35.47,
+      "min": 21.58,
+      "max": 53.96,
+      "median": 35.97,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 25.18,
-      "max": 58.76,
-      "median": 41.97,
+      "min": 25.54,
+      "max": 59.6,
+      "median": 42.57,
       "currentPercentile": 50.0
     }
   },
