@@ -1,8 +1,8 @@
 {
   "symbol": "01024.HK",
-  "lastUpdate": "2026-08-17",
+  "lastUpdate": "2026-08-24",
   "current": {
-    "pe": 8.72,
+    "pe": 8.2,
     "pb": null,
     "ps": null,
     "dividendYield": null,
@@ -10,16 +10,16 @@
   },
   "history5y": {
     "pe": {
-      "min": 8.72,
-      "max": 193.96,
+      "min": 8.2,
+      "max": 195.57,
       "median": 15.27,
       "currentPercentile": 0.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 8.72,
-      "max": 193.96,
+      "min": 8.2,
+      "max": 195.57,
       "median": 15.27,
       "currentPercentile": 0.0
     }
