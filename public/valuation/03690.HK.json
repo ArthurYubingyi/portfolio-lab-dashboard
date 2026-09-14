@@ -1,8 +1,8 @@
 {
   "symbol": "03690.HK",
-  "lastUpdate": "2026-09-07",
+  "lastUpdate": "2026-09-14",
   "current": {
-    "pe": -11.4,
+    "pe": -10.48,
     "pb": null,
     "ps": null,
     "dividendYield": null,
@@ -10,17 +10,17 @@
   },
   "history5y": {
     "pe": {
-      "min": 16.49,
-      "max": 1179.19,
-      "median": 49.71,
+      "min": 16.31,
+      "max": 1184.21,
+      "median": 49.45,
       "currentPercentile": 0.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 16.49,
-      "max": 1179.19,
-      "median": 49.71,
+      "min": 16.31,
+      "max": 1184.21,
+      "median": 49.45,
       "currentPercentile": 0.0
     }
   },

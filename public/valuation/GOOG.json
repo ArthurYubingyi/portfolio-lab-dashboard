@@ -1,12 +1,12 @@
 {
   "symbol": "GOOG",
-  "lastUpdate": "2026-09-07",
+  "lastUpdate": "2026-09-14",
   "current": {
     "pe": 16.83,
     "pb": 6.59,
     "ps": 9.2,
     "dividendYield": 0.26,
-    "peg": 1.24
+    "peg": 1.2
   },
   "history5y": {
     "pe": {
@@ -17,7 +17,7 @@
     },
     "pb": {
       "min": 3.95,
-      "max": 9.22,
+      "max": 9.23,
       "median": 6.59,
       "currentPercentile": 50.0
     }
@@ -31,7 +31,7 @@
     },
     "pb": {
       "min": 3.95,
-      "max": 9.22,
+      "max": 9.23,
       "median": 6.59,
       "currentPercentile": 50.0
     }
