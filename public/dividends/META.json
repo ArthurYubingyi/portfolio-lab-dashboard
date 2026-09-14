@@ -1,6 +1,6 @@
 {
   "symbol": "META",
-  "lastUpdate": "2026-09-07",
+  "lastUpdate": "2026-09-14",
   "history": [
     {
       "exDividendDate": "2026-06-15",
@@ -63,5 +63,13 @@
       "currency": "USD"
     }
   ],
-  "upcoming": []
+  "upcoming": [
+    {
+      "exDividendDate": "2026-09-21",
+      "paymentDate": null,
+      "amount": null,
+      "currency": "USD",
+      "estimated": true
+    }
+  ]
 }
