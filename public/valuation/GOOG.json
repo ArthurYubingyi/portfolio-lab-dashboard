@@ -1,38 +1,38 @@
 {
   "symbol": "GOOG",
-  "lastUpdate": "2026-10-19",
+  "lastUpdate": "2026-10-26",
   "current": {
-    "pe": 16.9,
-    "pb": 6.62,
-    "ps": 9.24,
-    "dividendYield": 0.26,
-    "peg": 1.18
+    "pe": 15.92,
+    "pb": 6.23,
+    "ps": 8.7,
+    "dividendYield": 0.28,
+    "peg": 1.11
   },
   "history5y": {
     "pe": {
-      "min": 10.14,
-      "max": 25.36,
-      "median": 16.9,
+      "min": 9.55,
+      "max": 23.88,
+      "median": 15.92,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 3.97,
-      "max": 9.27,
-      "median": 6.62,
+      "min": 3.74,
+      "max": 8.73,
+      "median": 6.23,
       "currentPercentile": 50.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 10.14,
-      "max": 25.36,
-      "median": 16.9,
+      "min": 9.55,
+      "max": 23.88,
+      "median": 15.92,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 3.97,
-      "max": 9.27,
-      "median": 6.62,
+      "min": 3.74,
+      "max": 8.73,
+      "median": 6.23,
       "currentPercentile": 50.0
     }
   },
