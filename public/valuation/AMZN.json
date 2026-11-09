@@ -1,38 +1,38 @@
 {
   "symbol": "AMZN",
-  "lastUpdate": "2026-11-02",
+  "lastUpdate": "2026-11-09",
   "current": {
-    "pe": 19.43,
-    "pb": 4.23,
-    "ps": 3.26,
+    "pe": 20.96,
+    "pb": 4.57,
+    "ps": 3.52,
     "dividendYield": null,
-    "peg": 1.39
+    "peg": 1.2
   },
   "history5y": {
     "pe": {
-      "min": 11.66,
-      "max": 29.15,
-      "median": 19.43,
+      "min": 12.58,
+      "max": 31.44,
+      "median": 20.96,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 2.54,
-      "max": 5.93,
-      "median": 4.23,
+      "min": 2.74,
+      "max": 6.4,
+      "median": 4.57,
       "currentPercentile": 50.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 11.66,
-      "max": 29.15,
-      "median": 19.43,
+      "min": 12.58,
+      "max": 31.44,
+      "median": 20.96,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 2.54,
-      "max": 5.93,
-      "median": 4.23,
+      "min": 2.74,
+      "max": 6.4,
+      "median": 4.57,
       "currentPercentile": 50.0
     }
   },

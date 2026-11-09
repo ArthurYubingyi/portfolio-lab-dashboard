@@ -1,38 +1,38 @@
 {
   "symbol": "TSLA",
-  "lastUpdate": "2026-11-02",
+  "lastUpdate": "2026-11-09",
   "current": {
-    "pe": 439.35,
-    "pb": 17.7,
-    "ps": 15.26,
+    "pe": 393.65,
+    "pb": 15.86,
+    "ps": 13.67,
     "dividendYield": null,
-    "peg": 4.66
+    "peg": 4.18
   },
   "history5y": {
     "pe": {
-      "min": 263.61,
-      "max": 659.03,
-      "median": 439.35,
+      "min": 236.19,
+      "max": 590.47,
+      "median": 393.65,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 10.62,
-      "max": 24.78,
-      "median": 17.7,
+      "min": 9.52,
+      "max": 22.2,
+      "median": 15.86,
       "currentPercentile": 50.0
     }
   },
   "history10y": {
     "pe": {
-      "min": 263.61,
-      "max": 659.03,
-      "median": 439.35,
+      "min": 236.19,
+      "max": 590.47,
+      "median": 393.65,
       "currentPercentile": 50.0
     },
     "pb": {
-      "min": 10.62,
-      "max": 24.78,
-      "median": 17.7,
+      "min": 9.52,
+      "max": 22.2,
+      "median": 15.86,
       "currentPercentile": 50.0
     }
   },
