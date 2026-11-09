@@ -1,6 +1,6 @@
 {
   "symbol": "GOOG",
-  "lastUpdate": "2026-11-02",
+  "lastUpdate": "2026-11-09",
   "history": [
     {
       "exDividendDate": "2026-09-04",
@@ -63,5 +63,13 @@
       "currency": "USD"
     }
   ],
-  "upcoming": []
+  "upcoming": [
+    {
+      "exDividendDate": "2026-12-07",
+      "paymentDate": null,
+      "amount": null,
+      "currency": "USD",
+      "estimated": true
+    }
+  ]
 }
